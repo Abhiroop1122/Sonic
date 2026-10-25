@@ -274,6 +274,7 @@ class SoundEngine(private val context: Context?) {
             synchronized(pureLock) {
                 runCatching { PureOutput.apply(ctx, false, OutputDevice(), 0, 0, C.ENCODING_PCM_16BIT, exact = false) }
                 pureKey = null
+                integerOutput = null
             }
         }
     }
@@ -294,6 +295,17 @@ class SoundEngine(private val context: Context?) {
     private var pureKey: PureKey? = null
     private var pureResult = BitPerfect.OFF
 
+    /** A bit-perfect stream the track must carry as integers: its rate, channel mask and encoding. */
+    private data class IntegerOutput(val sampleRate: Int, val channelMask: Int, val encoding: Int)
+    @Volatile private var integerOutput: IntegerOutput? = null
+
+    /**
+     * The integer encoding a new track at [sampleRate] / [channelMask] must use for the bit-perfect
+     * mode arranged for it, or null to play the stream as it is (IntegerPcmOutputProvider asks).
+     */
+    fun integerOutputFor(sampleRate: Int, channelMask: Int): Int? =
+        integerOutput?.takeIf { it.sampleRate == sampleRate && it.channelMask == channelMask }?.encoding
+
     private fun applyPure() {
         val ctx = context ?: return
         val st = stream ?: return
@@ -303,8 +315,10 @@ class SoundEngine(private val context: Context?) {
         val key = PureKey(pure, st.sampleRate, st.channels, st.trackEncoding, exact, device)
         val result = synchronized(pureLock) {
             if (key != pureKey) {
-                pureResult = runCatching { PureOutput.apply(ctx, pure, device, st.sampleRate, st.channels, st.trackEncoding, exact) }
-                    .getOrDefault(BitPerfect.UNSUPPORTED)
+                val choice = runCatching { PureOutput.apply(ctx, pure, device, st.sampleRate, st.channels, st.trackEncoding, exact) }
+                    .getOrDefault(PureOutput.Choice(BitPerfect.UNSUPPORTED))
+                pureResult = choice.state
+                integerOutput = choice.integerOutput?.let { IntegerOutput(st.sampleRate, PureOutput.channelMask(st.channels), it) }
                 pureKey = key
             }
             pureResult
@@ -435,34 +449,52 @@ object PureOutput {
         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
         .build()
 
+    /** What [apply] arranged: the state, and the integer encoding the track must use when it isn't the stream's own. */
+    data class Choice(val state: BitPerfect, val integerOutput: Int? = null)
+
     /**
      * Asks Android to play the stream bit-perfect to the USB DAC media is routed to ([routed]).
-     * Only an exact match counts: the mixer mode must have the stream's own encoding, channel mask
-     * and sample rate, and [exact] says the samples are the file's own. Anything else is reported
+     * Only an exact match counts: the mixer mode must have the stream's sample rate and channel mask,
+     * and [exact] says the samples are the file's own. The stream's own encoding is matched first; a
+     * float stream (a file up to 24-bit, which float holds exactly) may also go out as 24- or 32-bit
+     * integers, the modes most USB DACs offer, and the [Choice] says so. Anything else is reported
      * as it is, and no preference is left set.
      */
-    fun apply(context: Context, enable: Boolean, routed: OutputDevice, sampleRate: Int, channels: Int, encoding: Int, exact: Boolean): BitPerfect {
-        if (Build.VERSION.SDK_INT < 34) return if (enable) BitPerfect.UNSUPPORTED else BitPerfect.OFF
-        val am = context.getSystemService(AudioManager::class.java) ?: return BitPerfect.UNSUPPORTED
+    fun apply(context: Context, enable: Boolean, routed: OutputDevice, sampleRate: Int, channels: Int, encoding: Int, exact: Boolean): Choice =
+        choose(context, enable, routed, sampleRate, channels, encoding, exact)
+
+    private fun choose(context: Context, enable: Boolean, routed: OutputDevice, sampleRate: Int, channels: Int, encoding: Int, exact: Boolean): Choice {
+        if (Build.VERSION.SDK_INT < 34) return Choice(if (enable) BitPerfect.UNSUPPORTED else BitPerfect.OFF)
+        val am = context.getSystemService(AudioManager::class.java) ?: return Choice(BitPerfect.UNSUPPORTED)
         val usbs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).filter { OutputDevices.kindOf(it.type) == OutputKind.USB }
         if (!enable) {
             usbs.forEach { runCatching { am.clearPreferredMixerAttributes(attrs, it) } }
-            return BitPerfect.OFF
+            return Choice(BitPerfect.OFF)
         }
-        if (usbs.isEmpty()) return BitPerfect.NO_USB
+        if (usbs.isEmpty()) return Choice(BitPerfect.NO_USB)
         // The preference only acts on the device media is actually routed to.
-        if (routed.kind != OutputKind.USB) return BitPerfect.NOT_ROUTED
-        val usb = usbs.firstOrNull { it.id == routed.id } ?: usbs.firstOrNull { it.type == routed.type } ?: return BitPerfect.NOT_ROUTED
+        if (routed.kind != OutputKind.USB) return Choice(BitPerfect.NOT_ROUTED)
+        val usb = usbs.firstOrNull { it.id == routed.id } ?: usbs.firstOrNull { it.type == routed.type } ?: return Choice(BitPerfect.NOT_ROUTED)
         fun clear() = runCatching { am.clearPreferredMixerAttributes(attrs, usb) }
-        if (!exact) { clear(); return BitPerfect.NOT_EXACT }
+        if (!exact) { clear(); return Choice(BitPerfect.NOT_EXACT) }
         val options = runCatching { am.getSupportedMixerAttributes(usb) }.getOrDefault(emptyList())
             .filter { it.mixerBehavior == AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT }
-        if (options.isEmpty()) { clear(); return BitPerfect.UNSUPPORTED }
+        if (options.isEmpty()) { clear(); return Choice(BitPerfect.UNSUPPORTED) }
         val mask = channelMask(channels)
-        val match = options.firstOrNull { it.format.sampleRate == sampleRate && it.format.encoding == encoding && it.format.channelMask == mask }
-        if (match == null) { clear(); return BitPerfect.NO_MATCH }
-        return if (runCatching { am.setPreferredMixerAttributes(attrs, usb, match) }.getOrDefault(false)) BitPerfect.ON else BitPerfect.UNSUPPORTED
+        val match = bitPerfectEncodings(encoding).firstNotNullOfOrNull { wanted ->
+            options.firstOrNull { it.format.sampleRate == sampleRate && it.format.encoding == wanted && it.format.channelMask == mask }
+        }
+        if (match == null) { clear(); return Choice(BitPerfect.NO_MATCH) }
+        if (!runCatching { am.setPreferredMixerAttributes(attrs, usb, match) }.getOrDefault(false)) return Choice(BitPerfect.UNSUPPORTED)
+        return Choice(BitPerfect.ON, match.format.encoding.takeIf { it != encoding })
     }
+
+    /**
+     * The track encodings a stream in [encoding] can go out bit-perfect in, best first: its own, and
+     * for float (24-bit samples held exactly) packed 24-bit or 32-bit integers too.
+     */
+    fun bitPerfectEncodings(encoding: Int): List<Int> =
+        if (encoding == C.ENCODING_PCM_FLOAT) listOf(C.ENCODING_PCM_FLOAT, C.ENCODING_PCM_24BIT, C.ENCODING_PCM_32BIT) else listOf(encoding)
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun channelMask(channels: Int): Int = when (channels) {

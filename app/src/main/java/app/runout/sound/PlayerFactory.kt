@@ -40,6 +40,9 @@ object PlayerFactory {
                 enableAudioOutputPlaybackParams: Boolean,
             ): AudioSink {
                 val base = outputSink?.invoke(context, floatOut) ?: DefaultAudioSink.Builder(context)
+                    // Android's AudioTrack, or for a bit-perfect stream to an integer-only DAC, a
+                    // 24- or 32-bit integer track fed the file's own samples.
+                    .setAudioOutputProvider(IntegerPcmOutputProvider(context, engine))
                     .setEnableFloatOutput(floatOut)
                     // Speed (the platter-hold wind-down) via Android's AudioTrack, which also works in the float path.
                     .setEnableAudioOutputPlaybackParameters(true)
