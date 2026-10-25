@@ -252,7 +252,8 @@ for name, ((x0, x1), (y0, y1)) in L.KEYS.items():
 bm = bmesh.new()
 ZP = Z1 + 0.0005
 LABEL_BOXES = [
-    (L.MAIN_X[0] + 0.17, L.MAIN_X[0] + 1.2, 1.15, 1.26),      # RUNOUT · RG-1
+    (L.MAIN_X[0] + 0.17, L.MAIN_X[0] + 1.2, 1.15, 1.26),      # RG-1
+    (L.BRAND_BOX[0], L.BRAND_BOX[1], L.BRAND_BOX[2], L.BRAND_BOX[3]),  # SONIC.
     (L.MAIN_X[1] - 0.8, L.MAIN_X[1] - 0.08, -1.24, -1.14),     # 33⅓ RPM
     (L.LED_STATUS[0] + 0.04, L.LED_STATUS[0] + 0.40, L.LED_STATUS[1] - 0.05, L.LED_STATUS[1] + 0.05),
 ]

@@ -56,6 +56,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -213,6 +216,10 @@ data class RoomState(
     val autoUpdates: Boolean = true,
     /** Stable or development builds; null until you've chosen (asked at your first check). */
     val updateChannel: app.runout.update.UpdateChannel? = null,
+    /** Show the Bluetooth codec (opt-in), what it is when known, and why not when it isn't. */
+    val bluetoothCodecOn: Boolean = false,
+    val bluetoothCodec: app.runout.sound.BluetoothCodec? = null,
+    val bluetoothCodecProblem: String? = null,
     /** Uploads only on Wi-Fi or Ethernet. */
     val soulseekWifiOnly: Boolean = true,
     /** How many people can download from you at once. */
@@ -286,12 +293,16 @@ interface RoomActions : DeckActions {
     fun setTheme(theme: ThemeMode) {}
     fun setDeckSkin(deck: DeckSkin) {}
     fun setIntroOnLaunch(on: Boolean) {}
+    fun setDeckLights(on: Boolean) {}
+    fun setVinylOnly(on: Boolean) {}
     /** Measures the music and download folders for Settings › Storage. */
     fun analyzeStorage() {}
     /** Asks GitHub for a newer release (Settings › About). */
     fun checkForUpdates() {}
     fun setAutoUpdates(enabled: Boolean) {}
     fun setUpdateChannel(channel: app.runout.update.UpdateChannel) {}
+    /** Turns the Bluetooth codec readout on (asking for nearby devices, then the headphones' link) or off. */
+    fun setBluetoothCodec(enabled: Boolean) {}
     /** Opens a release's page in the browser, where its APK is. */
     fun openUpdate(page: String) {}
     /** Empties Sonic's cache (not covers, not the library). */
@@ -519,9 +530,21 @@ fun RoomScreen(
         if (panel != null) { if (pageHistory.isNotEmpty()) backPage() else closePanel() } else pulledId = null
     }
 
+    // Vinyl only: a tap on the dark room lights it up and the deck goes back to its band; it stays
+    // up while it's being used (each touch starts the wait again) and goes dark after a quiet while.
+    var peeks by remember { mutableIntStateOf(0) }
+    var peeking by remember { mutableStateOf(false) }
+    LaunchedEffect(peeks) { if (peeks > 0) { peeking = true; delay(VINYL_ONLY_PEEK_MS); peeking = false } }
+
     BoxWithConstraints(
         modifier
             .fillMaxSize()
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    if (peeking) peeks++
+                }
+            }
             .background(Room.Background)
             .semantics { testTagsAsResourceId = true }
             .testTag("screen:room")
@@ -610,6 +633,14 @@ fun RoomScreen(
             alpha = e.coerceIn(0f, 1f)
             translationY = (1f - e) * 20.dp.toPx()
         }
+        // Settings › Flags › vinyl only: sideways, with no page open, everything but the deck goes
+        // black (pixels off on an OLED screen) and the deck moves to the middle. A tap anywhere
+        // brings the room back (see [peeks]).
+        val vinylOnly = state.look.vinylOnly && !portrait && panel?.takeIf { it.fullPage } == null && !setupOpen && pulledId == null
+        val chromeAlpha by androidx.compose.animation.core.animateFloatAsState(if (vinylOnly && !peeking) 0f else 1f, tween(700), label = "vinyl-only")
+        val chrome = Modifier.graphicsLayer { alpha = chromeAlpha }
+        // Put out, the deck moves from its band on the left to the middle of the screen.
+        val deckShift = with(LocalDensity.current) { maxWidth.toPx() } * LANDSCAPE_ROOM / 2f
         // An empty deck sits back at half strength; under onboarding it's shown whole, and it eases
         // back as the room comes in rather than changing under the greeting.
         val deckAlpha by androidx.compose.animation.core.animateFloatAsState(
@@ -646,6 +677,7 @@ fun RoomScreen(
                     onRecordDragged = { occupied = false; useEject = true },
                     liftOff = { swapLift.value },
                     skin = state.look.deckFor(Room.dark),
+                    lit = state.look.lit(Room.dark),
                 )
             }
             val crate = @Composable { m: Modifier, geometry: CrateGeometry ->
@@ -706,15 +738,15 @@ fun RoomScreen(
                 // Landscape: the deck on the left, nothing printed around it; the room's column on the right.
                 Row(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))) {
                     Column(
-                        Modifier.weight(1f - LANDSCAPE_ROOM).fillMaxHeight(),
+                        Modifier.weight(1f - LANDSCAPE_ROOM).fillMaxHeight().graphicsLayer { translationX = (1f - chromeAlpha) * deckShift },
                         verticalArrangement = Arrangement.SpaceBetween,
                     ) {
                         turntable(Modifier.fillMaxWidth().weight(1f), Alignment.Center)
-                        Row(Modifier.fillMaxWidth().then(rise).padding(start = 22.dp, end = 22.dp, bottom = 16.dp)) {
+                        Row(Modifier.fillMaxWidth().then(rise).then(chrome).padding(start = 22.dp, end = 22.dp, bottom = 16.dp)) {
                             BasicText(bandCaption(state, landscape = true), style = Room.LabelQuiet, modifier = Modifier.weight(1f), maxLines = 1)
                         }
                     }
-                    Column(Modifier.weight(LANDSCAPE_ROOM).fillMaxHeight().then(rise).windowInsetsPadding(WindowInsets.navigationBars).padding(bottom = NAV_HEIGHT)) {
+                    Column(Modifier.weight(LANDSCAPE_ROOM).fillMaxHeight().then(rise).then(chrome).windowInsetsPadding(WindowInsets.navigationBars).padding(bottom = NAV_HEIGHT)) {
                         TopBar(state, onDownloads = { panel = Panel.DOWNLOADS; pulledId = null }, onAccount = openAccount, onSleep = { sleepOpen = true })
                         if (state.albums.isEmpty()) {
                             EmptyRoom(state, actions, Modifier.fillMaxWidth().weight(1f))
@@ -1122,7 +1154,7 @@ fun RoomScreen(
         // One nav bar for the room and every page, the open page's cell in black.
         // In landscape it sits at the foot of the room's column, beside the deck.
         // The same side insets as the room's column, so the bar lines up with it.
-        if (!setupOpen) Box(Modifier.fillMaxSize().zIndex(11.5f).then(rise).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
+        if (!setupOpen) Box(Modifier.fillMaxSize().zIndex(11.5f).then(rise).then(chrome).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
             TeNavBar(
                 active = page,
                 badges = navBadges(state),
@@ -1151,6 +1183,9 @@ fun RoomScreen(
                     .windowInsetsPadding(WindowInsets.navigationBars),
             )
         }
+        // Vinyl only, put out: the first tap, wherever it lands, only lights the room up again, so
+        // it never starts a record or presses a key by surprise.
+        if (vinylOnly && !peeking) Box(Modifier.fillMaxSize().zIndex(11.6f).testTag("vinyl-only-wake").pointerInput(Unit) { detectTapGestures { peeks++ } })
         // Sheets opened by a page's content cover the whole screen, nav bar included.
         if (page != null) Box(Modifier.fillMaxSize().zIndex(11.7f)) { PageSheetLayer(pageSheets) }
 
@@ -1535,6 +1570,9 @@ internal const val DIG_FORGET_MS = 10_000L
 
 /** The room's column in landscape: 412.5 of 892 on the board, beside the deck's band. */
 internal const val LANDSCAPE_ROOM = 0.4625f
+
+/** How long the room stays lit in vinyl-only mode after the last touch. */
+private const val VINYL_ONLY_PEEK_MS = 10_000L
 
 /** The nav bar's height: 11 + 20 icon + 8 + a 10 sp line + 11. */
 internal val NAV_HEIGHT = 62.dp

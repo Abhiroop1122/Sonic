@@ -489,8 +489,15 @@ class ListeningRoomUiTest {
     fun `the look follows the phone and the theme until pinned`() {
         val look = Look()
         assertEquals(true, look.dark(phoneDark = true))
-        assertEquals(DeckSkin.DARK, look.deckFor(dark = true))
+        assertEquals(DeckSkin.NEON, look.deckFor(dark = true))
         assertEquals(DeckSkin.WHITE_TEAL, look.deckFor(dark = false))
+        // Neon is for a dark room: pinned, a light room still gets white / teal.
+        assertEquals(DeckSkin.WHITE_TEAL, look.copy(deck = DeckSkin.NEON).deckFor(dark = false))
+        assertEquals(DeckSkin.DARK, look.copy(deck = DeckSkin.DARK).deckFor(dark = true))
+        // Its room is unlit unless the lights are asked for; every other deck is always lit.
+        assertEquals(false, look.lit(dark = true))
+        assertEquals(true, look.copy(deckLights = true).lit(dark = true))
+        assertEquals(true, look.lit(dark = false))
         assertEquals(false, look.copy(theme = ThemeMode.LIGHT).dark(phoneDark = true))
         assertEquals(true, look.copy(theme = ThemeMode.DARK).dark(phoneDark = false))
         assertEquals(DeckSkin.MONO_WHITE, look.copy(deck = DeckSkin.MONO_WHITE).deckFor(dark = true))
@@ -543,6 +550,34 @@ class ListeningRoomUiTest {
         compose.onNodeWithTag("onboarding-intro").assertDoesNotExist()
         compose.onNodeWithTag("toggle:Intro on launch").performScrollTo().performClick()
         assertEquals(listOf("intro:true"), calls)
+    }
+
+    @Test
+    fun `vinyl only puts the room out sideways, and a tap anywhere brings it back until it's left alone`() {
+        compose.mainClock.autoAdvance = false
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() { override fun startStop() { calls += "startStop" } }
+        compose.setContent { RoomScreen(state().copy(look = Look(vinylOnly = true)), actions) }
+        compose.mainClock.advanceTimeBy(1_500)
+        compose.onNodeWithTag("turntable").assertExists()
+        // The first tap, even on the deck's start key, only wakes the room.
+        compose.onNodeWithTag("vinyl-only-wake").assertExists()
+        compose.onNodeWithTag("deck:startstop").performClick()
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals(emptyList<String>(), calls)
+        compose.onNodeWithTag("vinyl-only-wake").assertDoesNotExist()
+        // In use it stays up; ten quiet seconds put it out again.
+        compose.mainClock.advanceTimeBy(8_000)
+        compose.onNodeWithTag("vinyl-only-wake").assertDoesNotExist()
+        compose.mainClock.advanceTimeBy(3_000)
+        compose.onNodeWithTag("vinyl-only-wake").assertExists()
+    }
+
+    @Test
+    fun `upright, vinyl only changes nothing`() {
+        portrait()
+        compose.setContent { RoomScreen(state().copy(look = Look(vinylOnly = true)), RecordingActions()) }
+        compose.onNodeWithTag("vinyl-only-wake").assertDoesNotExist()
     }
 
     @Test

@@ -5,6 +5,7 @@ Run inside Blender with THEME and SCRIPTS (this folder) set:
 Writes textures/prints_<theme>.png (2048x1536, straight alpha) and textures/screen_preview.png.
 """
 import importlib
+import math
 import sys
 
 import bpy
@@ -86,13 +87,28 @@ def key_box(name):
 
 
 # Static labels on the chassis.
-text("RUNOUT · RG-1", L.MAIN_X[0] + 0.195, 1.205, 0.06, INK, fnt=font_medium, spacing=1.25)
-text("33⅓ RPM", L.MAIN_X[1] - 0.11, -1.19, 0.055, INK, align="RIGHT", spacing=1.15)
+words = theme.get("words", True)
+if words:
+    text("RG-1", L.MAIN_X[0] + 0.195, 1.205, 0.06, INK, fnt=font_medium, spacing=1.25)
+    text("33⅓ RPM", L.MAIN_X[1] - 0.11, -1.19, 0.055, INK, align="RIGHT", spacing=1.15)
 text("playing", L.LED_STATUS[0] + 0.06, L.LED_STATUS[1], 0.058, INK)
+
+# The wordmark, as the app sets it: SONIC in Array Bold, the full stop a signal-orange disc on the
+# baseline, as wide as the letters' stroke (0.2 of the type size).
+brand = text("SONIC", 0.0, L.BRAND_BASELINE, L.BRAND_SIZE, INK, fnt=bpy.data.fonts.load(L.FONT_BRAND))
+brand.data.align_y = "BOTTOM_BASELINE"
+bpy.context.view_layer.update()
+dot = L.BRAND_SIZE * 0.2
+gap = dot * 0.6
+width = brand.dimensions.x
+brand.location.x = L.BRAND_RIGHT - dot - gap - width
+SIGNAL_INK = emission("Signal", L.SIGNAL)
+poly([(L.BRAND_RIGHT - dot / 2 + dot / 2 * math.cos(a), L.BRAND_BASELINE + dot / 2 + dot / 2 * math.sin(a))
+      for a in (i * 2 * math.pi / 48 for i in range(48))], SIGNAL_INK)
 
 # Keys: a lowercase word in the top-left corner, a large icon in the middle (TE style).
 LABELS = {"Key_Prev": "prev", "Key_Next": "next", "Key_StartStop": "start / stop", "Key_Eject": "eject"}
-for name, word in LABELS.items():
+for name, word in LABELS.items() if words else ():
     x0, y0, x1, y1, cx, cy = key_box(name)
     text(word, x0 + 0.05, y1 - 0.065, 0.058, KEY_INK)
 

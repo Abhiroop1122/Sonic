@@ -112,6 +112,19 @@ class StudioLights(private val engine: Engine, private val scene: Scene, shadows
         scene.addEntity(lamp)
     }
 
+    /**
+     * Lights on, or out: out leaves only a dim ambient, so a record's face still reads on a deck
+     * that draws itself (the neon one's edges glow on their own).
+     */
+    fun setLit(on: Boolean) {
+        if (on == lit) return
+        lit = on
+        listOf(sun, fill, glint, lamp).forEach { if (on) scene.addEntity(it) else scene.removeEntity(it) }
+        ambient.intensity = if (on) AMBIENT else AMBIENT_OUT
+    }
+
+    private var lit = true
+
     fun destroy() {
         scene.removeEntity(sun)
         scene.removeEntity(fill)
@@ -134,6 +147,8 @@ class StudioLights(private val engine: Engine, private val scene: Scene, shadows
         const val FILL = 0.41f
         const val GLINT = 0.35f
         const val AMBIENT = 0.47f
+        /** With the lights out: enough for a record's label, little for anything else. */
+        const val AMBIENT_OUT = 0.32f
         const val LAMP = 12f
     }
 }

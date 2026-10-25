@@ -35,6 +35,7 @@ twin, used in the dark theme; missing, the light one shows:
 Intro deck renders for the other colourways (Settings › Flags › deck), used whatever the theme:
   deck-{empty,loaded,playing,arm}-dark   the dark RG-1
   deck-{empty,loaded,playing,arm}-mono   the mono white RG-1
+  deck-{empty,loaded,playing,arm}-neon   the neon RG-1 (the dark room's own; captured with its lights out)
 These are rendered from the room's own 3D deck by a debug build (ui/deck/DeckCapture.kt), so the
 intro lands on exactly the deck the room shows: pick the deck in Flags, use the three-quarter view,
 run

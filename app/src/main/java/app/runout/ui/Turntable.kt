@@ -222,6 +222,8 @@ fun Turntable(
     liftOff: () -> Float = { 0f },
     /** Which RG-1 stands here (Settings › Flags › deck), already resolved from the theme. */
     skin: DeckSkin = DeckSkin.WHITE_TEAL,
+    /** Whether the studio lights are on (Settings › Flags: the neon deck stands in the dark by default). */
+    lit: Boolean = true,
 ) {
     val context = LocalContext.current
     val textMeasurer = rememberTextMeasurer()
@@ -369,6 +371,7 @@ fun Turntable(
     LaunchedEffect(renderer, playing) { renderer?.setStatusLamp(playing) }
     val darkRoom = Room.dark
     LaunchedEffect(renderer, darkRoom) { renderer?.setGroundShadow(!darkRoom) }
+    LaunchedEffect(renderer, lit) { renderer?.setLit(lit) }
     val stripStep = if (deck.album == null) 0 else (deck.fraction * 64).toInt()
     LaunchedEffect(renderer, stripStep, playing) { renderer?.setStrip(stripStep / 64f, playing) }
     // While the record turns over the LED reads FLIP (then the new side's code); EJECT while it flies home.
@@ -481,7 +484,7 @@ fun Turntable(
                     AndroidView(
                         factory = { ctx ->
                             TextureView(ctx).also { tv ->
-                                runCatching { DeckRenderer(ctx, tv, skin.asset ?: DeckSkin.WHITE_TEAL.asset!!).also { it.resume() } }
+                                runCatching { DeckRenderer(ctx, tv, skin.asset ?: DeckSkin.WHITE_TEAL.asset!!, glow = skin == DeckSkin.NEON).also { it.resume() } }
                                     .onSuccess { tv.tag = it; renderer = it; deckView = tv }
                                     .onFailure { e ->
                                         android.util.Log.w("RunoutDeck", "3D deck unavailable, using the flat deck", e)
@@ -672,9 +675,11 @@ private class FlatColours(val plinth: Color, val panel: Color, val platter: Colo
         private val WhiteTeal = FlatColours(Color(0xFFEEF0F0), Color(0xFFE9ECEC), Color(0xFF3F5D5A), Color(0xFFDDE3E5), Color(0xFFB9C2C6), Color(0xFF86A6A1), Color(0xFFD0805F))
         private val MonoWhite = FlatColours(Color(0xFFEDECE6), Color(0xFFE6E5DE), Color(0xFF3D4244), Color(0xFFDDE0DE), Color(0xFFB9C2C6), Color(0xFFC4C7C3), Color(0xFFD0805F))
         private val Dark = FlatColours(Color(0xFF30353B), Color(0xFF2B3035), Color(0xFF1C2124), Color(0xFF6B7378), Color(0xFFAAB5B8), Color(0xFF555D64), Color(0xFFD0805F))
+        private val Neon = FlatColours(Color(0xFF050506), Color(0xFF050506), Color(0xFF0A0A0B), Color(0xFF2A2A2C), Color(0xFFE6E6E8), Color(0xFF0C0C0D), Color(0xFF0C0C0D))
         fun of(skin: DeckSkin) = when (skin) {
             DeckSkin.MONO_WHITE -> MonoWhite
             DeckSkin.DARK -> Dark
+            DeckSkin.NEON -> Neon
             else -> WhiteTeal
         }
     }

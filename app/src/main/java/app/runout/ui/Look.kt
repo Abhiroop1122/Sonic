@@ -10,20 +10,30 @@ enum class ThemeMode(val label: String) { PHONE("phone"), LIGHT("light"), DARK("
 
 /**
  * The RG-1's colourways, each its own model from the Blender build (same parts, same names, other
- * materials). [MATCH] follows the theme: white / teal in light, dark in dark.
+ * materials). [MATCH] follows the theme: white / teal in light, neon in dark. [NEON] (OLED black,
+ * drawn by white neon edges) is for a dark room only.
  */
-enum class DeckSkin(val label: String, val asset: String?) {
+enum class DeckSkin(val label: String, val asset: String?, val darkOnly: Boolean = false) {
     MATCH("theme", null),
     WHITE_TEAL("white / teal", "deck/turntable_white_teal.glb"),
     MONO_WHITE("mono white", "deck/turntable_mono_white.glb"),
     DARK("dark", "deck/turntable_dark.glb"),
+    NEON("neon", "deck/turntable_neon.glb", darkOnly = true),
 }
 
 /**
  * Settings › Flags › look: the theme, which deck stands in the room, and whether the needle-drop
  * intro plays each time the app opens (onboarding's first screen, without the steps after it).
+ * [deckLights] lights the neon deck's room (off: only its edges and the record show); [vinylOnly]
+ * puts out everything but the deck in landscape, for an OLED screen left playing.
  */
-data class Look(val theme: ThemeMode = ThemeMode.PHONE, val deck: DeckSkin = DeckSkin.MATCH, val introOnLaunch: Boolean = false) {
+data class Look(
+    val theme: ThemeMode = ThemeMode.PHONE,
+    val deck: DeckSkin = DeckSkin.MATCH,
+    val introOnLaunch: Boolean = false,
+    val deckLights: Boolean = false,
+    val vinylOnly: Boolean = false,
+) {
     /** Whether the room is dark, given the phone's own setting. */
     fun dark(phoneDark: Boolean): Boolean = when (theme) {
         ThemeMode.PHONE -> phoneDark
@@ -31,11 +41,15 @@ data class Look(val theme: ThemeMode = ThemeMode.PHONE, val deck: DeckSkin = Dec
         ThemeMode.DARK -> true
     }
 
-    /** The deck to draw: the pinned one, or the theme's. */
-    fun deckFor(dark: Boolean): DeckSkin = when (deck) {
-        DeckSkin.MATCH -> if (dark) DeckSkin.DARK else DeckSkin.WHITE_TEAL
+    /** The deck to draw: the pinned one, or the theme's; a dark-only deck gives way to white / teal in light. */
+    fun deckFor(dark: Boolean): DeckSkin = when {
+        deck == DeckSkin.MATCH -> if (dark) DeckSkin.NEON else DeckSkin.WHITE_TEAL
+        deck.darkOnly && !dark -> DeckSkin.WHITE_TEAL
         else -> deck
     }
+
+    /** Whether the deck's room is lit: always, but for the neon deck, which is unlit unless [deckLights]. */
+    fun lit(dark: Boolean): Boolean = deckFor(dark) != DeckSkin.NEON || deckLights
 }
 
 /** [Look], kept in the "look" preferences: following the phone and the theme, the intro off, until changed. */
@@ -47,9 +61,12 @@ class LookPreferences(context: Context) {
     fun setTheme(theme: ThemeMode) = save(_look.value.copy(theme = theme))
     fun setDeck(deck: DeckSkin) = save(_look.value.copy(deck = deck))
     fun setIntroOnLaunch(on: Boolean) = save(_look.value.copy(introOnLaunch = on))
+    fun setDeckLights(on: Boolean) = save(_look.value.copy(deckLights = on))
+    fun setVinylOnly(on: Boolean) = save(_look.value.copy(vinylOnly = on))
 
     private fun save(look: Look) {
-        prefs.edit().putString(THEME, look.theme.name).putString(DECK, look.deck.name).putBoolean(INTRO, look.introOnLaunch).apply()
+        prefs.edit().putString(THEME, look.theme.name).putString(DECK, look.deck.name).putBoolean(INTRO, look.introOnLaunch)
+            .putBoolean(LIGHTS, look.deckLights).putBoolean(VINYL_ONLY, look.vinylOnly).apply()
         _look.value = look
     }
 
@@ -57,11 +74,15 @@ class LookPreferences(context: Context) {
         prefs.getString(THEME, null)?.let { n -> ThemeMode.entries.firstOrNull { it.name == n } } ?: ThemeMode.PHONE,
         prefs.getString(DECK, null)?.let { n -> DeckSkin.entries.firstOrNull { it.name == n } } ?: DeckSkin.MATCH,
         prefs.getBoolean(INTRO, false),
+        prefs.getBoolean(LIGHTS, false),
+        prefs.getBoolean(VINYL_ONLY, false),
     )
 
     private companion object {
         const val THEME = "theme"
         const val DECK = "deck"
         const val INTRO = "intro_on_launch"
+        const val LIGHTS = "deck_lights"
+        const val VINYL_ONLY = "vinyl_only"
     }
 }

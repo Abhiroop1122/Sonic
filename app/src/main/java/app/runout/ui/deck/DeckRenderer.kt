@@ -36,7 +36,7 @@ import com.google.android.filament.gltfio.Gltfio
  * only when something changed, and the frame callback is only armed while there is something to
  * draw, so a still deck costs no work per vsync. Everything here runs on the main thread.
  */
-class DeckRenderer(private val context: Context, textureView: TextureView, model: String = DeckSkin.WHITE_TEAL.asset!!) : Choreographer.FrameCallback {
+class DeckRenderer(private val context: Context, textureView: TextureView, model: String = DeckSkin.WHITE_TEAL.asset!!, glow: Boolean = false) : Choreographer.FrameCallback {
     private val engine = FilamentShared.engine
     private val renderer: Renderer = engine.createRenderer()
     private val scene: Scene = engine.createScene()
@@ -108,6 +108,8 @@ class DeckRenderer(private val context: Context, textureView: TextureView, model
         }
 
         lights = StudioLights(engine, scene, shadows = true)
+        // The neon deck's edges are brighter than white: bloom gives them their halo.
+        if (glow) view.bloomOptions = view.bloomOptions.apply { enabled = true; strength = 0.22f; threshold = true; levels = 6 }
 
         scene.addEntities(deck.entities)
         val rm = engine.renderableManager
@@ -233,6 +235,12 @@ class DeckRenderer(private val context: Context, textureView: TextureView, model
      * The baked shadow under the deck. On the dark room's true black its grey would glow round the
      * plinth rather than shade the floor, so there it's taken out of the scene.
      */
+    /** The studio lights on or out (see [StudioLights.setLit]). */
+    fun setLit(on: Boolean) {
+        lights.setLit(on)
+        invalidate()
+    }
+
     fun setGroundShadow(visible: Boolean) {
         val e = deck.getFirstEntityByName("Shadow_Plane").takeIf { it != 0 } ?: return
         if (visible) scene.addEntity(e) else scene.removeEntity(e)

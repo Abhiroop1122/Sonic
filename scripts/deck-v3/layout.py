@@ -76,6 +76,8 @@ THEMES = {
     "white_teal": {"ink": (0.11, 0.13, 0.14), "key_ink": (0.07, 0.09, 0.10)},
     "mono_white": {"ink": (0.11, 0.12, 0.12), "key_ink": (0.07, 0.08, 0.08)},
     "dark": {"ink": (0.80, 0.82, 0.82), "key_ink": (0.88, 0.90, 0.90)},
+    # OLED black with white neon edges (neon.py): icons only, no words, as the lines are the look.
+    "neon": {"ink": (0.86, 0.87, 0.88), "key_ink": (0.94, 0.95, 0.96), "words": False},
 }
 
 # Working folder: v2-original/ (Hermes' .blend files) in, the v3 .blend/.glb and textures/ out.
@@ -83,3 +85,12 @@ V3 = os.environ.get("RUNOUT_DECK_V3", os.path.expanduser("~/Downloads/runout_tur
 _FONTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../app/src/main/res/font")
 FONT = os.path.join(_FONTS, "inter_regular.ttf")
 FONT_MEDIUM = os.path.join(_FONTS, "inter_medium.ttf")
+# The wordmark's dot-matrix face (licensed, kept out of git: app/src/main/assets/fonts/licensed).
+FONT_BRAND = os.path.join(_FONTS, "../../assets/fonts/licensed/Array-Bold.ttf")
+SIGNAL = (0.941, 0.353, 0.141)  # #F05A24, the brand's full stop
+
+# SONIC. printed in the control module's top-right corner, right edge on the key grid's.
+BRAND_RIGHT = 2.3725
+BRAND_BASELINE = 1.095
+BRAND_SIZE = 0.15
+BRAND_BOX = (1.55, 2.44, 1.05, 1.26)

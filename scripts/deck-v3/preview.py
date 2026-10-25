@@ -1,6 +1,7 @@
 """Preview renders of the deck for build.py: straight down, and at the app's tilt."""
 import bpy, math, mathutils
-def shoot(path, mode="top", res=(1600,1000), ortho_scale=5.2, tilt=25):
+def shoot(path, mode="top", res=(1600,1000), ortho_scale=5.2, tilt=25, dark=False):
+    """dark: a black room with the lights off (the neon deck), else a light grey one with a sun."""
     sc = bpy.context.scene
     cam = bpy.data.objects.get("_Cam")
     if cam is None:
@@ -27,6 +28,7 @@ def shoot(path, mode="top", res=(1600,1000), ortho_scale=5.2, tilt=25):
     if sc.world is None: sc.world = bpy.data.worlds.new("W")
     sc.world.use_nodes = True
     bg = sc.world.node_tree.nodes.get("Background")
-    if bg: bg.inputs[0].default_value = (0.9,0.9,0.9,1); bg.inputs[1].default_value = 0.8
+    if bg: bg.inputs[0].default_value = (0,0,0,1) if dark else (0.9,0.9,0.9,1); bg.inputs[1].default_value = 0.0 if dark else 0.8
+    sun.data.energy = 0.0 if dark else 3.0
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)

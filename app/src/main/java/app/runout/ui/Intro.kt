@@ -160,8 +160,8 @@ fun RunoutIntro(onFinished: () -> Unit, modifier: Modifier = Modifier, deck: Dec
     // when it's there, else the drawn ones.
     val ownSleeve = rememberOnboardingPicture("intro-sleeve", 360.dp)
     val ownDisc = rememberOnboardingPicture("intro-disc", 360.dp)
-    // The renders of the deck the room shows: the dark and mono white RG-1's captured from the room's
-    // own deck (assets/onboarding/deck-*-dark, -mono), read before the first frame so the intro never
+    // The renders of the deck the room shows: the dark, mono white and neon RG-1's captured from the
+    // room's own deck (assets/onboarding/deck-*-dark, -mono, -neon), read before the first frame so the intro never
     // opens on another deck; the white / teal ones built in.
     val px = with(LocalDensity.current) { 600.dp.roundToPx() }
     val captured = remember(deck) {
@@ -403,6 +403,7 @@ internal fun introDeckPictures(deck: DeckSkin): List<String>? {
     val suffix = when (deck) {
         DeckSkin.DARK -> "dark"
         DeckSkin.MONO_WHITE -> "mono"
+        DeckSkin.NEON -> "neon"
         else -> return null
     }
     return listOf("empty", "loaded", "playing", "arm").map { "deck-$it-$suffix" }

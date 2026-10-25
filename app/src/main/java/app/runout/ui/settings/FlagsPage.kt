@@ -106,6 +106,16 @@ private val HelpUpdates = TeHelp("help · flags", "check for updates", listOf(
     "stable offers tested releases. development also offers pre-releases, the newest features first. both are the same app and update each other.",
 ))
 
+private val HelpDeckLights = TeHelp("help · flags", "deck lights", listOf(
+    "the neon deck stands in the dark: its edges glow on their own, and only a dim light falls on the record.",
+    "on, the room's studio lights come up, and the black deck shows its shape and shine.",
+))
+
+private val HelpVinylOnly = TeHelp("help · flags", "vinyl only", listOf(
+    "turn the phone sideways and everything but the deck goes black: the top bar, the crate and the track list. the deck moves to the middle.",
+    "on an oled screen black pixels are off, so a phone left playing uses less battery. tap anywhere to bring the room back; it goes dark again after ten quiet seconds.",
+))
+
 private val HelpSleep = TeHelp("help · flags", "sleep mode", listOf(
     "puts a moon in the room's top bar. tap it to stop the music in 15 to 50 minutes.",
     "when the time is up the music fades out over a few seconds and the needle lifts.",
@@ -134,8 +144,14 @@ internal fun FlagsPage(state: RoomState, actions: RoomActions) {
             Segments(ThemeMode.entries, state.look.theme, { it.label }, tag = { "theme:${it.name}" }, onSelect = actions::setTheme)
         }
         PageSection("03 deck") {
-            BasicText("theme puts the dark deck in a dark room and white / teal in a light one.", style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp))
-            Segments(DeckSkin.entries, state.look.deck, { it.label }, tag = { "deck:${it.name}" }, onSelect = actions::setDeckSkin)
+            BasicText("theme puts the neon deck in a dark room and white / teal in a light one. neon is for dark rooms only.", style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp))
+            Segments(DeckSkin.entries.filter { !it.darkOnly || Room.dark }, state.look.deck, { it.label }, tag = { "deck:${it.name}" }, onSelect = actions::setDeckSkin)
+            Column(Modifier.fillMaxWidth()) {
+                if (state.look.deckFor(Room.dark) == DeckSkin.NEON) {
+                    HelpToggle("Deck lights", "Off, only the deck's edges and the record glow.", state.look.deckLights, actions::setDeckLights) { help = HelpDeckLights }
+                }
+                HelpToggle("Vinyl only", "In landscape, everything but the deck goes dark.", state.look.vinylOnly, actions::setVinylOnly) { help = HelpVinylOnly }
+            }
         }
         // F-Droid builds leave the updates to F-Droid.
         if (app.runout.BuildConfig.UPDATE_CHECK) PageSection("04 updates") {
