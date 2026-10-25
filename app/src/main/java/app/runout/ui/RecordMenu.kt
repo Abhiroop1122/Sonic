@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -135,8 +134,6 @@ internal fun RecordDetails(
     var capturing by remember { mutableStateOf(false) }
     var recorded by remember { mutableStateOf(CompletableDeferred<Unit>()) }
     val share by rememberUpdatedState(onSharePicture)
-    // The picture carries the SONIC sleeve, small, in its corner: the cream one, or the black one in the dark.
-    val mark = rememberOnboardingPicture("intro-sleeve", 56.dp) ?: ImageBitmap.imageResource(app.runout.R.drawable.onboarding_sleeve)
     LaunchedEffect(capturing) {
         if (!capturing) return@LaunchedEffect
         // Drawn on the next frame; the effect is cancelled with the card if it never is.
@@ -160,8 +157,9 @@ internal fun RecordDetails(
                             recorded.complete(Unit)
                         },
                 ) {
-                    RecordSheet(record, capped = false, headerEnd = SHARE_MARK + 8.dp)
-                    androidx.compose.foundation.Image(mark, contentDescription = null, modifier = Modifier.align(Alignment.TopEnd).size(SHARE_MARK))
+                    RecordSheet(record, capped = false, headerEnd = SHARE_MARK_WIDTH + 8.dp)
+                    // The intro's dotted wordmark, small in the corner: the card's own ink, its dot orange.
+                    BrandText(brandMark(), Room.Display.copy(fontSize = 13.sp, lineHeight = 13.sp), Modifier.align(Alignment.TopEnd).padding(top = 4.dp))
                 }
             }
         }
@@ -180,8 +178,8 @@ internal fun RecordDetails(
     }
 }
 
-/** The SONIC sleeve in the shared picture's top-right corner. */
-private val SHARE_MARK = 28.dp
+/** Room kept clear for the wordmark in the shared picture's top-right corner. */
+private val SHARE_MARK_WIDTH = 64.dp
 
 /** What the details card and its picture share: the record, its tags and notes, the running order and the total. */
 @Composable
