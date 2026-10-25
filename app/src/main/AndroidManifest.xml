@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Opt-in: which codec Bluetooth headphones use (Settings › Sound). Asked for only when turned on. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
     <!-- Needed to ask Android 14+ for bit-perfect USB output in Pure mode -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 

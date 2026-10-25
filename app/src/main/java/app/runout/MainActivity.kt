@@ -100,6 +100,9 @@ class MainActivity : ComponentActivity() {
             val update by graph.updates.state.collectAsStateWithLifecycle()
             val autoUpdates by graph.updates.auto.collectAsStateWithLifecycle()
             val updateChannel by graph.updates.channel.collectAsStateWithLifecycle()
+            val bluetoothCodecOn by graph.bluetoothCodecs.enabled.collectAsStateWithLifecycle()
+            val bluetoothCodec by graph.bluetoothCodecs.codec.collectAsStateWithLifecycle()
+            val bluetoothCodecProblem by graph.bluetoothCodecs.problem.collectAsStateWithLifecycle()
             val dark = look.dark(androidx.compose.foundation.isSystemInDarkTheme())
             LaunchedEffect(dark) { applyTheme(dark) }
             // The next launch screen in the pinned theme's paper too (with "phone", Android's own).
@@ -188,6 +191,21 @@ class MainActivity : ComponentActivity() {
             val autoEqPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 if (uri != null) importAutoEq(uri)
             }
+            // The Bluetooth codec readout: Android's companion-device dialog for the headphones, then
+            // "Nearby devices" before it. Both only after the listener turns the readout on.
+            val linkHeadphones = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+                graph.bluetoothCodecs.onLinked(result.resultCode == RESULT_OK)
+            }
+            val askLink: (android.content.IntentSender) -> Unit = { sender ->
+                runCatching { linkHeadphones.launch(androidx.activity.result.IntentSenderRequest.Builder(sender).build()) }
+            }
+            val nearbyDevices = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                if (granted) graph.bluetoothCodecs.refresh(askLink) else graph.bluetoothCodecs.refresh {}
+            }
+            // Headphones coming and going: look again, while the readout is on.
+            LaunchedEffect(output.device.kind, output.device.id, bluetoothCodecOn) {
+                if (bluetoothCodecOn && output.device.kind == app.runout.sound.OutputKind.BLUETOOTH) graph.bluetoothCodecs.refresh(askLink)
+            }
             val actions = remember {
                 object : RoomActions {
                     override fun pickFolder() { graph.soulseek.onExternalFlow(true); folderPicker.launch(null) }
@@ -242,9 +260,17 @@ class MainActivity : ComponentActivity() {
                     override fun setTheme(theme: app.runout.ui.ThemeMode) = graph.look.setTheme(theme)
                     override fun setDeckSkin(deck: app.runout.ui.DeckSkin) = graph.look.setDeck(deck)
                     override fun setIntroOnLaunch(on: Boolean) = graph.look.setIntroOnLaunch(on)
+                    override fun setDeckLights(on: Boolean) = graph.look.setDeckLights(on)
+                    override fun setVinylOnly(on: Boolean) = graph.look.setVinylOnly(on)
                     override fun checkForUpdates() { graph.scope.launch { graph.updates.check() } }
                     override fun setAutoUpdates(enabled: Boolean) = graph.updates.setAuto(enabled)
                     override fun setUpdateChannel(channel: app.runout.update.UpdateChannel) = graph.updates.setChannel(channel)
+                    override fun setBluetoothCodec(enabled: Boolean) {
+                        graph.bluetoothCodecs.setEnabled(enabled)
+                        if (!enabled) return
+                        if (graph.bluetoothCodecs.needsPermission()) nearbyDevices.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                        else graph.bluetoothCodecs.refresh(askLink)
+                    }
                     override fun openUpdate(page: String) { runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(page))) } }
                     override fun analyzeStorage() {
                         graph.scope.launch { graph.storage.analyze(graph.library.folder.value, graph.soulseek.destination.value, graph.shelf.value) }
@@ -384,6 +410,9 @@ class MainActivity : ComponentActivity() {
                     update = update,
                     autoUpdates = autoUpdates,
                     updateChannel = updateChannel,
+                    bluetoothCodecOn = bluetoothCodecOn,
+                    bluetoothCodec = bluetoothCodec,
+                    bluetoothCodecProblem = bluetoothCodecProblem,
                     sleepAt = sleepAt,
                     soulseekWifiOnly = wifiOnly,
                     soulseekUploadSlots = uploadSlots,

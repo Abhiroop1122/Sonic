@@ -225,7 +225,7 @@ private fun SettingsPage(
     ) {
         PageBackLink("← settings", "settings-back") { onSection(null) }
         when (section) {
-            SettingsSection.SOUND -> SoundPanel(state.sound, state.crackleOn, actions, state.output)
+            SettingsSection.SOUND -> SoundPanel(state.sound, state.crackleOn, actions, state.output, state)
             SettingsSection.ACCOUNT -> {
                 ConnectionNotice(state, actions, onSetup)
                 SoulseekAccountPanel(state, actions, onOffline, onSignIn = onSetup, onDownloads = onDownloads)

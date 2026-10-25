@@ -236,6 +236,7 @@ open class RecordingActions : RoomActions {
     override fun playTrack(sideIndex: Int, trackIndex: Int) { log += "play:$sideIndex:$trackIndex" }
     override fun checkForUpdates() { log += "checkUpdates" }
     override fun setUpdateChannel(channel: app.runout.update.UpdateChannel) { log += "channel:${channel.name}" }
+    override fun setBluetoothCodec(enabled: Boolean) { log += "btcodec:$enabled" }
     override fun openUpdate(page: String) { log += "openUpdate:$page" }
     override fun toggleCrackle() { log += "crackle" }
     override fun needleDrop(fraction: Float) { log += "needleDrop" }

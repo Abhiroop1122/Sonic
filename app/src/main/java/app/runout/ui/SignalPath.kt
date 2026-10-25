@@ -69,7 +69,7 @@ private fun rate(hz: Int) = AudioQuality.formatRate(hz)
  * a USB DAC media is routed to takes the file's own samples in an exactly matching mode; the bit
  * depth is the file's, not the decoder's; Bluetooth is lossy, whatever else is on.
  */
-fun signalPath(o: OutputStatus, s: SoundSettings): SignalPath? {
+fun signalPath(o: OutputStatus, s: SoundSettings, codec: app.runout.sound.BluetoothCodec? = null): SignalPath? {
     if (o.sampleRate == 0) return null
     val fileBits = o.sourceBits
     val bits = if (fileBits > 0) "$fileBits-bit" else "PCM"
@@ -130,6 +130,13 @@ fun signalPath(o: OutputStatus, s: SoundSettings): SignalPath? {
     val bitPerfect = o.bitPerfect == BitPerfect.ON && d.kind == OutputKind.USB && s.pure && !folded
     val routed = when {
         // Bluetooth first: nothing that goes over it is bit-perfect or lossless.
+        // With the codec readout on, what Android's Bluetooth stack says it is; lossy either way.
+        bluetooth && codec != null -> SignalPath.Step(
+            d.label, codec.label,
+            "Bluetooth re-encodes the music as ${codec.label}, as Android reports it. " +
+                (if (codec.name == "LDAC") "Even LDAC is lossy." else "It's a lossy codec.") + spatialNote,
+            ok = false,
+        )
         bluetooth -> SignalPath.Step(d.label, if (hiResFile) "Lossy · resampled by Android" else "Lossy", bluetoothDetail(d.type) + spatialNote, ok = false)
         bitPerfect -> SignalPath.Step(d.label, source, "Bit-perfect: the DAC gets the file's own samples.")
         d.kind == OutputKind.USB -> SignalPath.Step(
@@ -301,8 +308,9 @@ private fun Modifier.rail(top: Boolean, bottom: Boolean) = drawBehind {
 internal fun SignalPanel(state: RoomState, actions: RoomActions, onSoundSettings: () -> Unit) {
     val s = state.sound
     Column(Modifier.fillMaxWidth().testTag("panel:signal"), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SignalChain(signalPath(state.output, s), gap = 16.dp)
+        SignalChain(signalPath(state.output, s, state.bluetoothCodec.takeIf { state.bluetoothCodecOn }), gap = 16.dp)
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (state.output.device.kind == OutputKind.BLUETOOTH || state.bluetoothCodecOn) BluetoothCodecToggle(state, actions)
             ToggleRow("Pure", "Nothing is done to the sound.", s.pure, { on -> actions.updateSound { it.copy(pure = on) } })
             ToggleRow(
                 "Hi-res output",
@@ -313,6 +321,21 @@ internal fun SignalPanel(state: RoomState, actions: RoomActions, onSoundSettings
         }
         TeButton("open sound settings", onSoundSettings, Modifier.fillMaxWidth().testTag("signal-sound-settings"))
     }
+}
+
+/**
+ * The opt-in for naming the Bluetooth codec: off, nothing is asked for; on, Android asks for nearby
+ * devices and, once per pair of headphones, links them to Sonic. Its line says what went wrong.
+ */
+@Composable
+internal fun BluetoothCodecToggle(state: RoomState, actions: RoomActions) {
+    ToggleRow(
+        "Bluetooth codec",
+        state.bluetoothCodecProblem ?: state.bluetoothCodec?.label?.let { "Android says: $it." }
+            ?: "Names the codec your headphones use. Asks for nearby devices.",
+        state.bluetoothCodecOn,
+        actions::setBluetoothCodec,
+    )
 }
 
 /** A small on/off switch with its name, for the home screen's corner. */

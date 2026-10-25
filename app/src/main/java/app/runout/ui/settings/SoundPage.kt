@@ -130,12 +130,13 @@ internal object SoundHelp {
  * 22 dp apart. Each "?" opens its help panel.
  */
 @Composable
-fun SoundPanel(s: SoundSettings, crackleOn: Boolean, actions: RoomActions, output: app.runout.sound.OutputStatus = app.runout.sound.OutputStatus()) {
+fun SoundPanel(s: SoundSettings, crackleOn: Boolean, actions: RoomActions, output: app.runout.sound.OutputStatus = app.runout.sound.OutputStatus(), state: RoomState? = null) {
     var help by remember { mutableStateOf<TeHelp?>(null) }
     val dsp = !s.pure
     Column(Modifier.fillMaxWidth().testTag("panel:sound"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         PageSection("01 signal") {
-            SignalChain(signalPath(output, s))
+            SignalChain(signalPath(output, s, state?.bluetoothCodec?.takeIf { state.bluetoothCodecOn }))
+            if (state != null && (output.device.kind == app.runout.sound.OutputKind.BLUETOOTH || state.bluetoothCodecOn)) BluetoothCodecToggle(state, actions)
         }
         PageSection("02 output") {
             // Crackle moved here from the home screen: it's part of how the deck sounds.

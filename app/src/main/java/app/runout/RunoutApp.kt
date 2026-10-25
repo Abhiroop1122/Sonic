@@ -18,6 +18,7 @@ import app.runout.model.Album
 import app.runout.model.Source
 import app.runout.net.DefaultHttp
 import app.runout.update.Updates
+import app.runout.sound.BluetoothCodecs
 import app.runout.net.Http
 import app.runout.playback.Deck
 import app.runout.playback.VinylSfx
@@ -89,6 +90,7 @@ class AppGraph(app: Application) {
     val look = LookPreferences(app)
     val storage = StorageAnalyzer(app)
     val updates = Updates(app, http, BuildConfig.VERSION_NAME)
+    val bluetoothCodecs = BluetoothCodecs(app)
     val social = SocialRepository(app)
     val share = ShareRepository(app, social)
     val pressing = PressingRepository(app)
