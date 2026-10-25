@@ -8,7 +8,7 @@ Sonic brings that ritual back to your phone. It's built for downloading, keeping
 <ul>
 <li>Every album in your folder becomes a record in a crate, its sides and resolution printed on the sleeve.</li>
 <li>Pull one out, drop it on the 3D turntable, play side A and turn it over for side B.</li>
-<li>Three decks (white and teal, mono white, dark), light or true-black dark, portrait or a full-screen landscape room.</li>
+<li>Four decks (white and teal, mono white, dark, and neon for the dark room), light or true-black dark, portrait or a full-screen landscape room that can put out everything but the deck.</li>
 </ul>
 
 <b>The sound</b>

@@ -5,6 +5,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.2.0 (2026-10-25)
+
+A neon deck for the dark room, the codec your headphones use, and covers that stay.
+
+- **The neon deck.** A fourth RG-1: OLED black, drawn by white neon edges that glow.
+  - It's the dark room's deck now: Flags › deck › theme puts it in a dark room (white / teal in a light one). It's for dark rooms only; picked in a light room, white / teal stands in.
+  - Its room is unlit: only the edges and the record show, with just enough light for the label. Flags › deck lights turns the studio lights on.
+  - In a dark room the intro plays on it.
+- **Vinyl only** (Flags › deck). Sideways, everything but the deck goes black and the deck moves to the middle: on an OLED screen those pixels are off. A tap anywhere brings the room back without pressing anything; it goes dark again after ten quiet seconds.
+- **The SONIC. wordmark** is printed in the top-right corner of every deck, its full stop an orange dot. The deck's old "RUNOUT" print is gone.
+- **Shared record pictures** carry the SONIC. wordmark instead of the sleeve, in ink that suits the light or the dark theme.
+- **Bluetooth codec** (Settings › Sound, or the Audio quality panel with headphones on). Off until you turn it on. It asks for nearby devices and, on Android 14 and later, Android's one-time link with your headphones; then the signal path names the codec, as Android reports it: "LDAC · 96 kHz · 32-bit". Still lossy, and it says so.
+- **24-bit to USB DACs.** For DACs whose bit-perfect modes take 24- or 32-bit integers, Pure now opens the output as integers and turns each sample back into the file's own value, so 24-bit files reach the DAC bit for bit. It only runs when Android offers such a mode; untried on a DAC that does (the Pixel 6 routes USB through its mixer).
+- **Covers:**
+  - Albums from Drops and Soulseek keep their art after a reinstall: Sonic reads it back from the album's own folder (`.cover.jpg`, or the sleeve inside `record.vinyl`).
+  - An album with no cover shows the SONIC sleeve, cream in light and black in dark, instead of a blank.
+  - Covers Sonic fetched or saved no longer show up in Google Photos and other gallery apps: the folders that hold them are marked as not media, older ones included.
+  - Each download wrote another copy of `record.vinyl` (as `record.vinyl (1).zip` and on). It's written once now, and the extra copies are tidied away.
+- **Downloads with the screen off** checked on a real phone.
+
+---
+
 ## 1.1.0 (2026-10-25)
 
 Feedback from the first week of 1.0.0, and updates from inside the app.

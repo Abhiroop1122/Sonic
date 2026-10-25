@@ -1,0 +1,6 @@
+- A neon deck for the dark room: OLED black with glowing white edges, lights off.
+- Vinyl only: sideways, everything but the deck goes black.
+- The SONIC. wordmark on every deck and on shared record pictures.
+- Bluetooth codec: the signal path names it (LDAC, AAC...), when you allow it.
+- 24-bit bit-perfect output to USB DACs that offer it.
+- Covers stay after a reinstall, albums without one show the Sonic sleeve, and none show up in your gallery.

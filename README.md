@@ -102,8 +102,10 @@ pages wait until you turn it back.
 
 - **Light or dark.** Dark is true black, kind to an OLED screen. The launcher icon follows: a
   cream sleeve in light, a black one in dark.
-- **Three decks.** The RG-1 turntable comes in white and teal, mono white, and dark. By default it
-  matches the theme.
+- **Four decks.** The RG-1 turntable comes in white and teal, mono white, dark, and neon: OLED
+  black drawn by glowing white edges, in an unlit room. By default it matches the theme: white and
+  teal in light, neon in dark.
+- **Vinyl only.** Sideways, everything but the deck goes black; a tap brings the room back.
 - **Flags** for the small habits: turn the record over by itself, start playing as soon as it
   lands, a sleep timer that fades the music and lifts the needle, and the intro every time the
   app opens.
@@ -139,6 +141,7 @@ theme's colours so it can't be missed.
   to 16-bit. The two work together.
 - **The signal path:** long-press the deck's LED to see the whole chain, track to Sonic to
   output, with the bit depth and rate at each step, and an honest word when Android resamples.
+  Allow it, and it names your headphones' Bluetooth codec too (LDAC, aptX, AAC…).
 - A 10-band EQ with presets, AutoEq headphone profiles, ReplayGain, a limiter and, if you want
   it, a little vinyl crackle.
 
@@ -222,7 +225,8 @@ release/     release notes, checksums, verification reports
 
 | Version | | |
 | :--- | :--- | :--- |
-| **[1.1.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.1.0)** | **Current** | The track wheel picker, update checks with stable and development builds, a clearer signal chain. |
+| **[1.2.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.2.0)** | **Current** | The neon deck, vinyl only, the Bluetooth codec, covers that stay. |
+| [1.1.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.1.0) | Release | The track wheel picker, update checks with stable and development builds, a clearer signal chain. |
 | [1.0.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.0.0) | Release | Sonic. Themes, three decks, Storage, swaps by hand. |
 | [0.6.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.6.0-dev.1) | Development | The RG-1 3D turntable, rendered with Filament. |
 | [0.5.1](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.5.1) | Release | Soulseek and FLAC, the redesigned room. |
