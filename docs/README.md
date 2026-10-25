@@ -46,11 +46,11 @@ These are working records from before 1.0, kept as written. They use the old nam
 | :--- | :--- |
 | [TE interview](design/TE-INTERVIEW.md) | The screen-by-screen interview behind the current Teenage Engineering-style design |
 | [Design checklist](design/UI-REDESIGN.md) | The earlier redesign interview and the status of every change |
-| [RG-1 deck v3](design/deck-v3-CHANGES.md) | The current 3D deck model and its three colourways |
+| [RG-1 deck v3](design/deck-v3-CHANGES.md) | The current 3D deck model and its colourways (the neon one is built by `scripts/deck-v3/neon.py`) |
 | [RG-1 deck v2](design/deck-v2-CHANGES.md) | The previous deck model |
 | [pen.dev prompt](design/PEN-DEV-PROMPT.md) | The brief given for the design enhancement pass |
 
-The design file itself is `design/runout-te.pen`, which opens in pen.dev.
+The design file itself is `design/runout-te.pen`, which opens in pen.dev. Its screens are the `TE · …` frames in the light theme, a `TE · 1.2 · …` row for the neon deck, vinyl only, Flags and the Bluetooth codec, and below them a `TE · Night · …` copy of every screen in the dark theme.
 
 ## Repository map
 
