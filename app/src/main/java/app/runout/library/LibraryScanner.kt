@@ -98,7 +98,10 @@ class LibraryScanner(private val context: Context) {
             audioFiles += audio.size
             if (audio.isNotEmpty()) {
                 val image = pickFolderImage(files)?.let { DocumentsContract.buildDocumentUriUsingTree(treeUri, it.docId) }
-                val (found, failed) = readFolder(treeUri, docId, nameOf(children, docId), audio, image)
+                // No picture in the folder: a Sonic download keeps its sleeve inside record.vinyl.
+                val packaged = if (image != null) null else files.firstOrNull { it.name == VINYL_RECORD || it.name == "$VINYL_RECORD.zip" }
+                    ?.let { packagedSleeve(DocumentsContract.buildDocumentUriUsingTree(treeUri, it.docId)) }
+                val (found, failed) = readFolder(treeUri, docId, nameOf(children, docId), audio, image, packaged)
                 unreadable += failed.size
                 if (failedFiles.size < ScanReport.MAX_LISTED) failedFiles += failed.take(ScanReport.MAX_LISTED - failedFiles.size)
                 found.forEach {
@@ -148,9 +151,28 @@ class LibraryScanner(private val context: Context) {
 
     private fun pickFolderImage(files: List<Entry>): Entry? {
         val images = files.filter { it.ext in IMAGE_EXTENSIONS }
-        return images.firstOrNull { it.name.substringBeforeLast('.').lowercase() in PREFERRED_IMAGE_NAMES }
+        // ".cover.jpg" is the hidden copy Sonic keeps beside a download, out of the photo gallery.
+        return images.firstOrNull { it.name.substringBeforeLast('.').lowercase().trimStart('.') in PREFERRED_IMAGE_NAMES }
             ?: images.firstOrNull()
     }
+
+    /** The sleeve.jpg inside a record.vinyl, at most [MAX_SLEEVE_BYTES]; null when there isn't one. */
+    private fun packagedSleeve(uri: Uri): ByteArray? = runCatching {
+        context.contentResolver.openInputStream(uri)?.use { raw ->
+            java.util.zip.ZipInputStream(raw.buffered()).use { zip ->
+                generateSequence { zip.nextEntry }.firstOrNull { it.name == "sleeve.jpg" } ?: return@use null
+                val out = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = zip.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                    if (out.size() > MAX_SLEEVE_BYTES) return@use null
+                }
+                out.toByteArray().takeIf { it.isNotEmpty() }
+            }
+        }
+    }.getOrNull()
 
     /** A provider MIME type or Android decoder fallback cannot bypass the music policy. */
     private fun readFile(uri: Uri, entry: Entry, wantPicture: Boolean): AudioInfo? =
@@ -162,6 +184,7 @@ class LibraryScanner(private val context: Context) {
         folderName: String,
         audio: List<Entry>,
         folderImage: Uri?,
+        packagedArt: ByteArray? = null,
     ): Pair<List<ScannedAlbum>, List<UnreadableFile>> {
         data class Read(val entry: Entry, val uri: Uri, val info: AudioInfo, val estimated: Boolean)
 
@@ -223,7 +246,7 @@ class LibraryScanner(private val context: Context) {
                     license = licences.singleOrNull()?.takeIf { licences.size == 1 && sorted.all { it.info.license != null } },
                     albumGainDb = sorted.firstNotNullOfOrNull { it.info.albumGainDb },
                 ),
-                embeddedArt = items.firstNotNullOfOrNull { it.info.picture },
+                embeddedArt = items.firstNotNullOfOrNull { it.info.picture } ?: packagedArt,
                 folderImage = folderImage,
             )
         }
@@ -232,6 +255,9 @@ class LibraryScanner(private val context: Context) {
 
     companion object {
         const val MAX_DEPTH = 8
+        /** Written by Sonic beside each download: the record's card, with its sleeve inside. */
+        const val VINYL_RECORD = "record.vinyl"
+        private const val MAX_SLEEVE_BYTES = 8 * 1024 * 1024
         val AUDIO_EXTENSIONS = setOf("flac")
         val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
         val PREFERRED_IMAGE_NAMES = setOf("cover", "folder", "front", "album", "albumart", "artwork")

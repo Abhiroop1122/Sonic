@@ -98,6 +98,35 @@ class FolderScanTest {
     }
 
     @Test
+    fun `a hidden cover beside a download is found, and a record's sleeve stands in when there's no picture`() {
+        val root = File(context.cacheDir, "download-covers").apply { deleteRecursively(); mkdirs() }
+        val plain = Fixtures.file("Music/.hidden/skip.flac") // no picture of its own
+        val sleeve = Fixtures.bytes("Music/Untagged/cover.jpg")
+        File(root, "Drop A").apply { mkdirs() }.let { dir ->
+            plain.copyTo(File(dir, "01 A.flac"))
+            File(dir, ".cover.jpg").writeBytes(sleeve)
+        }
+        // Drop C has the name Android gave it before 1.2.0.
+        listOf("Drop B" to "record.vinyl", "Drop C" to "record.vinyl.zip").forEach { (album, record) ->
+            File(root, album).apply { mkdirs() }.let { dir ->
+                plain.copyTo(File(dir, "01 ${album.last()}.flac"))
+                java.util.zip.ZipOutputStream(File(dir, record).outputStream()).use { zip ->
+                    zip.putNextEntry(java.util.zip.ZipEntry("manifest.json")); zip.write("{}".toByteArray())
+                    zip.putNextEntry(java.util.zip.ZipEntry("sleeve.jpg")); zip.write(sleeve)
+                }
+            }
+        }
+        tree = FolderProvider.install(root)
+        val (_, albums) = scan()
+        val a = albums.first { it.album.tracks.any { t -> t.fileName == "01 A.flac" } }
+        assertTrue(a.folderImage.toString(), a.folderImage.toString().endsWith(".cover.jpg"))
+        val b = albums.first { it.album.tracks.any { t -> t.fileName == "01 B.flac" } }
+        org.junit.Assert.assertArrayEquals(sleeve, b.embeddedArt)
+        val c = albums.first { it.album.tracks.any { t -> t.fileName == "01 C.flac" } }
+        org.junit.Assert.assertArrayEquals(sleeve, c.embeddedArt)
+    }
+
+    @Test
     fun `hidden folders are skipped and other files are reported`() {
         val (report, albums) = scan()
         assertTrue(albums.none { a -> a.album.tracks.any { "skip" in it.fileName } })

@@ -147,6 +147,8 @@ class SoulseekRepository(
     private val initialized = scope.async(Dispatchers.IO) {
         dao.pauseInterrupted("Interrupted. Sign in and resume to continue.")
         cleanupBrokenDownloads()
+        // Folders from before 1.2.0 have covers in thumbnails/ the photo gallery can see.
+        runCatching { storage.hideExistingThumbnails() }
         dao.offlineContacts()
         dao.failInterruptedMessages()
         connection.initialize()
@@ -1060,8 +1062,12 @@ class SoulseekRepository(
                 VinylPackage.write(out, VinylPackage.Kind.CARD, Profile("sonic", "Sonic.", 0), album, sleeve = album.coverPath?.let(::File), sources = links + listOf("thumbnails/${album.id}.jpg"))
                 out.toByteArray()
             }
+            storage.tidyRecordFiles(folder)
             storage.writeDocument(folder, "record.vinyl", bytes)
             album.coverPath?.let(::File)?.takeIf { it.isFile }?.readBytes()?.let { thumb ->
+                // Beside the music, so a fresh install (or any player) finds the cover; hidden by its
+                // dot so it stays out of the phone's photo gallery.
+                storage.writeDocument(folder, ".cover.jpg", thumb)
                 val thumbs = storage.thumbnailsDirectory()
                 storage.writeDocument(thumbs, "${album.id}.jpg", thumb)
             }

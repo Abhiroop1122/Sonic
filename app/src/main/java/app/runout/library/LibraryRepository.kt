@@ -152,6 +152,8 @@ class LibraryRepository(
         val job = scope.launch(start = CoroutineStart.LAZY) {
             _scan.value = ScanState.Scanning(ScanProgress(0, 0))
             _report.value = null
+            // An older Sonic's covers in this folder's thumbnails/ stay out of the photo gallery.
+            withContext(Dispatchers.IO) { runCatching { GalleryPrivacy.hideLeftovers(context, androidx.documentfile.provider.DocumentFile.fromTreeUri(context, tree)) } }
             val previous = if (replace) emptyList() else _albums.value
             if (fresh || replace) _albums.value = emptyList()
             if (replace) withContext(Dispatchers.IO) { AlbumJson.writeList(cacheFile, emptyList()) }

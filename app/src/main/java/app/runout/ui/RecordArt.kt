@@ -87,6 +87,25 @@ fun discLookFor(album: Album?): DiscLook {
     }
 }
 
+/** The SONIC sleeve's card: cream, or near-black in the dark, under the placeholder while it decodes. */
+private fun noCoverGround(): Color = if (Room.dark) Color(0xFF11110F) else Color(0xFFECE7DD)
+
+/** The SONIC sleeve for records without a cover, decoded once per theme and shared by every sleeve. */
+@Composable
+private fun rememberNoCoverSleeve(): ImageBitmap? {
+    val dark = Room.dark
+    val assets = androidx.compose.ui.platform.LocalContext.current.assets
+    val px = with(androidx.compose.ui.platform.LocalDensity.current) { 240.dp.roundToPx() }
+    val sleeve by androidx.compose.runtime.produceState(NO_COVER_SLEEVES[dark], dark) {
+        value = NO_COVER_SLEEVES[dark] ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            decodeOnboardingPicture(assets, if (dark) "intro-sleeve-dark" else "intro-sleeve", px)
+        }?.also { NO_COVER_SLEEVES[dark] = it }
+    }
+    return sleeve
+}
+
+private val NO_COVER_SLEEVES = java.util.concurrent.ConcurrentHashMap<Boolean, ImageBitmap>()
+
 /** A colour for albums with no cover, picked from the title so it stays the same every time. */
 fun fallbackColor(album: Album?): Color {
     val palette = listOf(0xFFE8E4FF, 0xFFDDEBFF, 0xFFFFE3EC, 0xFFE2F6EC, 0xFFFFF1D6, 0xFFE9E9EE)
@@ -271,17 +290,22 @@ fun DrawScope.drawRecord(
 @Composable
 fun SleeveArt(album: Album?, modifier: Modifier = Modifier, showSticker: Boolean = true, label: String? = null, missing: Int = 0) {
     val cover by rememberCover(album)
+    // A record with no cover of its own wears the SONIC sleeve, cream in the light and black in the dark.
+    val noArt = album != null && album.coverPath == null
+    val placeholder = if (noArt) rememberNoCoverSleeve() else null
     val gap = if (missing > 0) "$missing ${if (missing == 1) "track" else "tracks"} missing" else null
     BoxWithConstraints(
         modifier
             .clipToBounds()
-            .background(fallbackColor(album))
+            .background(if (noArt) noCoverGround() else fallbackColor(album))
             .semantics { if (album != null) contentDescription = listOfNotNull(album.title, album.artist, label, gap).joinToString(" / ") },
     ) {
         val k = maxWidth / BOARD_SLEEVE
         val bitmap = cover
         if (bitmap != null) {
             Image(bitmap = bitmap, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else if (placeholder != null) {
+            Image(bitmap = placeholder, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().testTag("sleeve-placeholder"))
         }
         // Shrink-wrap
         Box(

@@ -56,14 +56,38 @@ internal class DownloadStorage(
         check(valid && (actualSize < 0 || actualSize == size)) { "The destination could not save the complete FLAC file. Free storage and retry." }
     }
 
+    /**
+     * The download folder's thumbnails/, kept out of the photo gallery by a .nomedia file (the folder
+     * holds only covers, so nothing else is hidden). Made for older folders too, the first time it's used.
+     */
     fun thumbnailsDirectory(): DocumentFile {
         val root = requireDestination()
-        return root.findFile("thumbnails")?.takeIf { it.isDirectory } ?: root.createDirectory("thumbnails")
+        val dir = root.findFile("thumbnails")?.takeIf { it.isDirectory } ?: root.createDirectory("thumbnails")
             ?: throw IOException("Could not create the thumbnails folder.")
+        app.runout.library.GalleryPrivacy.hide(context, dir)
+        return dir
     }
+
+    /**
+     * Before 1.2.0 an album folder could hold record.vinyl.zip and copies of it, record.vinyl (1).zip
+     * and on, one per finished track: the first becomes record.vinyl again and the copies, Sonic's own,
+     * go.
+     */
+    fun tidyRecordFiles(folder: DocumentFile) {
+        val files = folder.listFiles()
+        if (files.none { it.name == "record.vinyl" }) files.firstOrNull { it.name == "record.vinyl.zip" }?.renameTo("record.vinyl")
+        files.filter { it.name?.matches(Regex("""record\.vinyl \(\d+\)\.zip""")) == true }.forEach { runCatching { it.delete() } }
+    }
+
+    /** The thumbnails/ folder an older Sonic made in the download folder, hidden now; nothing is created otherwise. */
+    fun hideExistingThumbnails() {
+        app.runout.library.GalleryPrivacy.hideLeftovers(context, destination()?.let { DocumentFile.fromTreeUri(context, it) }?.takeIf { it.canWrite() })
+    }
+
     fun writeDocument(folder: DocumentFile, name: String, bytes: ByteArray) {
-        val mime = if (name.endsWith(".vinyl")) "application/zip" else "application/octet-stream"
-        val target = folder.findFile(name) ?: folder.createFile(mime, name) ?: return
+        // A plain type keeps the name as given: with "application/zip" Android's storage renamed
+        // record.vinyl to record.vinyl.zip, so the next write never found it and made another.
+        val target = folder.findFile(name) ?: folder.createFile("application/octet-stream", name) ?: return
         context.contentResolver.openOutputStream(target.uri, "wt")?.use { it.write(bytes) }
     }
 }
