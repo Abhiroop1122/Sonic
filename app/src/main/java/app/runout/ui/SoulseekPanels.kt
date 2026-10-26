@@ -369,8 +369,14 @@ fun SoulseekMessagesPanel(state: RoomState, actions: RoomActions, onAccount: () 
     LaunchedEffect(state.soulseekConversation) { state.soulseekConversation?.takeIf { it != ignoreChat }?.let { selected = it } }
     val peer = selected
     val clock = rememberClock()
+    // A friend's shelf, opened from their chat: it takes the panel until closed.
+    val shelf = state.soulseekShelf
     Box(Modifier.fillMaxSize().testTag("panel:messages")) {
-        if (peer == null) {
+        if (shelf != null) {
+            FriendShelf(shelf, state.soulseekSession.signedIn, onBack = actions::closeSoulseekShelf) { dir ->
+                actions.openSoulseekFolder(shelf.username, dir); onDig()
+            }
+        } else if (peer == null) {
             var newChat by remember { mutableStateOf(false) }
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 if (!state.soulseekSession.signedIn) SignInNotice(onAccount)
@@ -569,6 +575,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 BasicText(peer, style = Room.Strong, maxLines = 1)
+                if (state.soulseekSession.signedIn) ArrowLink("their shelf", { actions.browseSoulseekShelf(peer) }, tag = "browse-shelf")
                 if (contact == null) ArrowLink("add friend", { actions.addSoulseekContact(peer) }, tag = "add-friend")
                 else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(8.dp).background(if (contact.online) Room.Online else Room.Background).then(if (contact.online) Modifier else Modifier.border(1.dp, Room.Ink)))
@@ -868,5 +875,59 @@ private fun BackgroundUseNote(onHelp: () -> Unit) {
                 )
             }
         }, Modifier.testTag("open-app-info"))
+    }
+}
+
+/**
+ * Friends › a friend › their shelf: every FLAC folder they share, from one browse of their share.
+ * A folder opens in Dig's folder view, with its tracks and the key to download it.
+ */
+@Composable
+private fun FriendShelf(shelf: app.runout.soulseek.SoulseekShelf, signedIn: Boolean, onBack: () -> Unit, onOpen: (String) -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onBack)
+    PageStep(onBack)
+    Column(Modifier.fillMaxSize().testTag("friend-shelf"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        Row(Modifier.fillMaxWidth().hairlineBottom(Room.Ink).padding(bottom = 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            BasicText(
+                "← chat", style = Room.Text,
+                modifier = Modifier.testTag("shelf-back").clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onBack),
+            )
+            BasicText("${shelf.username}'s shelf", style = Room.Strong, maxLines = 1)
+        }
+        when {
+            shelf.loading -> Column(Modifier.fillMaxWidth().padding(top = 44.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                DotVinylSpinner(Modifier.size(132.dp), description = "Reading their shelf")
+                BasicText("reading their shelf…", style = Room.LabelQuiet)
+            }
+            shelf.error != null -> BasicText(
+                if (signedIn) "${shelf.username} didn't answer. they may be offline, or not sharing anything right now." else "sign in to see their shelf.",
+                style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.testTag("shelf-error"),
+            )
+            shelf.folders.isEmpty() -> BasicText("${shelf.username} shares no flac albums right now.", style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("shelf-empty"))
+            else -> {
+                BasicText("${shelf.folders.size} flac folders · ${shelf.folders.sumOf { it.tracks.size }} tracks", style = Room.LabelQuiet)
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+                    items(shelf.folders.size) { i ->
+                        val f = shelf.folders[i]
+                        val bits = f.tracks.mapNotNull { it.bitDepth }.maxOrNull()
+                        val rate = f.tracks.mapNotNull { it.sampleRate }.maxOrNull()
+                        val quality = listOfNotNull(bits?.let { "$it-bit" }, rate?.let { app.runout.model.AudioQuality.formatRate(it) }).joinToString(" · ")
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .hairlineTop()
+                                .testTag("shelf-folder:${f.title}")
+                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { onOpen(f.directory) }
+                                .padding(vertical = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            BasicText(f.title.lowercase(), style = Room.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (f.parent.isNotBlank()) BasicText(f.parent.lowercase(), style = Room.LabelQuiet, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            BasicText(listOf("${f.tracks.size} tracks", quality, sizeLabel(f.size)).filter { it.isNotBlank() }.joinToString(" · "), style = Room.Label.copy(color = Room.Body))
+                        }
+                    }
+                }
+            }
+        }
     }
 }

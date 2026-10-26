@@ -343,7 +343,11 @@ private fun RemoteResults(
                 InfoDot("peers", onPeersHelp)
             }
             BasicText(searchStatus(discovery), style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("search-status"))
-            if (discovery.online.limited) BasicText("showing the first 5,000 flac matches. refine your search for a closer shortlist.", style = Room.Label.copy(color = Room.Body))
+            if (discovery.online.limited) BasicText("showing the first 15,000 flac matches. refine your search for a closer shortlist.", style = Room.Label.copy(color = Room.Body))
+            if (discovery.online.widened) BasicText(
+                "no one answered these exact words: soulseek hides searches for some names. sonic searched again with one word left out, and keeps only folders that match all of them.",
+                style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("search-widened"),
+            )
             val retry = discovery.online.phase in setOf(SearchPhase.FAILED, SearchPhase.INTERRUPTED)
             val broaden = discovery.remote.isEmpty() && discovery.online.phase == SearchPhase.COMPLETE
             if (retry || broaden) Row(Modifier.padding(top = 5.dp), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
@@ -533,7 +537,7 @@ private fun searchStatus(state: DiscoveryState): String {
 }
 
 /** "2.4 mb", "300 mb": lower case, one decimal under a hundred. */
-private fun sizeLabel(bytes: Long): String {
+internal fun sizeLabel(bytes: Long): String {
     fun f(v: Double, unit: String) = (if (v >= 100) String.format(Locale.ROOT, "%.0f", v) else String.format(Locale.ROOT, "%.1f", v)) + " $unit"
     return when {
         bytes >= 1_073_741_824 -> f(bytes / 1_073_741_824.0, "gb")

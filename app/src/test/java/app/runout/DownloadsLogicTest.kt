@@ -17,6 +17,7 @@ import app.runout.ui.fileState
 import app.runout.ui.shelfMatch
 import app.runout.ui.trackKey
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -77,6 +78,31 @@ class DownloadsLogicTest {
         assertEquals(FailureKind.PEER_AWAY, SoulseekPolicy.failureKind("Connection reset by peer (os error 104)"))
         assertEquals(FailureKind.REFUSED, SoulseekPolicy.failureKind("The upload failed on the other side"))
         assertEquals(FailureKind.REFUSED, SoulseekPolicy.failureKind("The user declined the download"))
+        // The peer's own reason now comes through: a full queue is "later", a ban is "elsewhere".
+        assertEquals(FailureKind.PEER_AWAY, SoulseekPolicy.failureKind("The other side refused: Too many files"))
+        assertEquals(FailureKind.PEER_AWAY, SoulseekPolicy.failureKind("The other side refused: Too many megabytes"))
+        assertEquals(FailureKind.REFUSED, SoulseekPolicy.failureKind("The other side refused: Banned"))
+        assertEquals(FailureKind.REFUSED, SoulseekPolicy.failureKind("The other side refused: File not shared."))
+    }
+
+    @Test fun `a long file name is shortened before its extension, never through it`() {
+        val long = "01 - " + "a very long track title with a featured artist and a remix credit ".repeat(3) + ".flac"
+        val safe = SoulseekPolicy.safeFileName(long)
+        assertTrue(safe, safe.endsWith(".flac"))
+        assertTrue(safe.length <= 120)
+        assertEquals("02 - Ivy.flac", SoulseekPolicy.safeFileName("02 - Ivy.flac"))
+        assertEquals("a_b.flac", SoulseekPolicy.safeFileName("a/b.FLAC"))
+        assertEquals("Track.flac", SoulseekPolicy.safeFileName(".flac"))
+    }
+
+    @Test fun `a dig search asks for flac, without punctuation, and can leave one word out`() {
+        assertEquals("frank ocean blonde flac", app.runout.soulseek.SearchTerms.network("frank ocean blonde"))
+        assertEquals("AC DC Back in Black flac", app.runout.soulseek.SearchTerms.network("AC/DC – Back in Black"))
+        assertEquals("air flac", app.runout.soulseek.SearchTerms.network("air flac"))
+        val variants = app.runout.soulseek.SearchTerms.variants("frank ocean blonde")
+        assertTrue(variants.toString(), "ocean blonde flac" in variants && "frank blonde flac" in variants)
+        assertTrue(variants.all { it.split(' ').size == 3 })
+        assertEquals(emptyList<String>(), app.runout.soulseek.SearchTerms.variants("blonde"))
     }
 
     @Test fun `another copy is the same track at the same size from someone new, the quickest first`() {

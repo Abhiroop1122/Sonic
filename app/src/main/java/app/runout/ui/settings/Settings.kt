@@ -448,6 +448,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AboutPage(state: Room
         BrandText(brandMark() + androidx.compose.ui.text.AnnotatedString(" $VERSION"), Room.Display.copy(fontSize = 33.sp))
         BasicText(if (BuildConfig.DEBUG) "development build · rg-1 v3" else "rg-1 v3", style = Room.LabelQuiet)
         UpdateLine(state, actions)
+        TeLink("what's new in this version", actions::showWhatsNew, tag = "about-whats-new")
     }
 }
 

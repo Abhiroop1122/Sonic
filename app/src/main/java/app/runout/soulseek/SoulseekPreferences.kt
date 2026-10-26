@@ -29,6 +29,23 @@ class SoulseekPreferences(context: Context) {
     /** How many people can download from you at the same time. */
     fun uploadSlots(owner: String) = prefs.getInt(key(owner, "uploadSlots"), DEFAULT_UPLOAD_SLOTS).coerceIn(1, 10)
     fun setUploadSlots(owner: String, slots: Int) { prefs.edit().putInt(key(owner, "uploadSlots"), slots.coerceIn(1, 10)).apply(); _revision.value++ }
+    /** What this phone has sent and received for [owner] since its first transfer here. */
+    fun totals(owner: String) = TransferTotals(
+        prefs.getLong(key(owner, "upBytes"), 0), prefs.getInt(key(owner, "upFiles"), 0),
+        prefs.getLong(key(owner, "downBytes"), 0), prefs.getInt(key(owner, "downFiles"), 0),
+        prefs.getLong(key(owner, "since"), 0),
+    )
+    fun addTotals(owner: String, upBytes: Long = 0, upFiles: Int = 0, downBytes: Long = 0, downFiles: Int = 0, now: Long = System.currentTimeMillis()): TransferTotals {
+        val t = totals(owner)
+        val next = TransferTotals(t.uploadedBytes + upBytes, t.uploadedFiles + upFiles, t.downloadedBytes + downBytes, t.downloadedFiles + downFiles, t.since.takeIf { it > 0 } ?: now)
+        prefs.edit().putLong(key(owner, "upBytes"), next.uploadedBytes).putInt(key(owner, "upFiles"), next.uploadedFiles)
+            .putLong(key(owner, "downBytes"), next.downloadedBytes).putInt(key(owner, "downFiles"), next.downloadedFiles)
+            .putLong(key(owner, "since"), next.since).apply()
+        return next
+    }
+    /** Asked once, after the first download, whether to share the download folder: either answer stands. */
+    fun shareAsked(owner: String) = prefs.getBoolean(key(owner, "shareAsked"), false)
+    fun setShareAsked(owner: String) { prefs.edit().putBoolean(key(owner, "shareAsked"), true).apply() }
     fun turtle() = prefs.getBoolean("turtle", false)
     fun setTurtle(enabled: Boolean) { prefs.edit().putBoolean("turtle", enabled).apply(); _revision.value++ }
     private fun key(owner: String, option: String) = SoulseekPolicy.digest(owner) + ":" + option
@@ -39,3 +56,12 @@ class SoulseekPreferences(context: Context) {
         val UPLOAD_SLOT_CHOICES = listOf(1, 2, 3, 5)
     }
 }
+
+/** Settings › Soulseek's tally: what went out to other people, what came in, and since when. */
+data class TransferTotals(
+    val uploadedBytes: Long = 0,
+    val uploadedFiles: Int = 0,
+    val downloadedBytes: Long = 0,
+    val downloadedFiles: Int = 0,
+    val since: Long = 0,
+)

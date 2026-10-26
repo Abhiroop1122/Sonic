@@ -1,5 +1,6 @@
 package app.runout
 
+import app.runout.update.WhatsNew
 import app.runout.ui.LookPreferences
 import android.app.Application
 import android.net.ConnectivityManager
@@ -90,6 +91,7 @@ class AppGraph(app: Application) {
     val look = LookPreferences(app)
     val storage = StorageAnalyzer(app)
     val updates = Updates(app, http, BuildConfig.VERSION_NAME)
+    val whatsNew = WhatsNew(app, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toLong())
     val bluetoothCodecs = BluetoothCodecs(app)
     val social = SocialRepository(app)
     val share = ShareRepository(app, social)

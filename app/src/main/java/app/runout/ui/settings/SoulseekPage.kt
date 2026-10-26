@@ -193,6 +193,7 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
                     if (sharing) actions.setSoulseekUploadSlots(it)
                 }
             }
+            TransferTotalsBlock(state.soulseekTotals)
         }
         PageSection("04 connection") {
             HelpToggle(
@@ -238,4 +239,21 @@ internal fun folderLabel(uri: String): String {
     val decoded = runCatching { android.net.Uri.decode(uri) }.getOrNull() ?: uri
     val tail = decoded.substringAfterLast("/tree/").substringAfterLast(':')
     return "/" + tail.trimStart('/')
+}
+
+/** What this account has given and taken on this phone: the uploads are the "giving something back". */
+@Composable
+private fun TransferTotalsBlock(totals: app.runout.soulseek.TransferTotals) {
+    fun files(n: Int) = if (n == 1) "1 file" else "$n files"
+    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("transfer-totals"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        BasicText("uploaded to others", style = Room.Text)
+        BasicText("${app.runout.ui.sizeLabel(totals.uploadedBytes)} · ${files(totals.uploadedFiles)}", style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("totals-uploaded"))
+        BasicText("downloaded", style = Room.Text, modifier = Modifier.padding(top = 5.dp))
+        BasicText("${app.runout.ui.sizeLabel(totals.downloadedBytes)} · ${files(totals.downloadedFiles)}", style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("totals-downloaded"))
+        val since = totals.since.takeIf { it > 0 }?.let {
+            java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                .format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.ENGLISH)).lowercase()
+        }
+        BasicText(since?.let { "on this phone since $it." } ?: "counted on this phone from your first transfer.", style = Room.LabelQuiet)
+    }
 }

@@ -104,6 +104,23 @@ class FridayDropsTest {
     }
 
     @Test
+    fun `from 30 October the pool is everything published before that Friday, and an empty answer isn't kept`() = runBlocking {
+        val week = DropsRepository.STABLE_FROM
+        val url = DropsRepository.searchUrl(3, stable = true, before = DropsRepository.opens(week))
+        assertTrue(url, url.contains(java.net.URLEncoder.encode("publicdate:[* TO 2026-10-30T00:00:00Z]", "UTF-8")))
+        // The page comes from the pool's size: 12,587 albums are 126 pages.
+        assertTrue(DropsRepository.pageFor(week, pages = 126) in 1..126)
+        assertEquals(DropsRepository.pageFor(week, pages = 126), DropsRepository.pageFor(week, pages = 126))
+
+        val empty = """{"response":{"numFound":0,"start":0,"docs":[]}}""".toByteArray()
+        val h = FakeHttp(mapOf("advancedsearch.php" to { empty }))
+        val drops = repo(h, date = "2026-10-30")
+        assertTrue(drops.refresh() is DropState.Failed)
+        assertTrue("nothing kept: the next try asks again", drops.refresh() is DropState.Failed)
+        assertTrue(h.calls.count { "rows=100" in it } >= 2)
+    }
+
+    @Test
     fun `the drops tab marks a week until its drop is opened`() = runBlocking {
         val drops = repo(http())
         assertTrue(drops.newDrop.value)

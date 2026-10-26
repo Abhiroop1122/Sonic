@@ -28,10 +28,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Runout">
 
+        <!-- adjustResize: the window stays put and Sonic's pages pad for the keyboard themselves.
+             Left to Android it also panned the window, so a chat's message box floated a keyboard
+             above the keys and the page's head slid under the status bar. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTask">
             <!-- .vinyl records and friend cards, opened from chat apps, Files or Quick Share -->
             <intent-filter>

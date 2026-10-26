@@ -240,12 +240,12 @@ class SoulseekRepositoryTest {
         login();repo.search("Album").join()
         val id=transport.commands.last {it.optString("op")=="search"}.getString("id")
         val files=JSONArray()
-        repeat(5001) {files.put(JSONObject().put("username","maya").put("path","Album/track-$it.flac").put("size",100))}
+        repeat(app.runout.soulseek.SearchTerms.MAX_RESULTS + 1) {files.put(JSONObject().put("username","maya").put("path","Album/track-$it.flac").put("size",100))}
         files.put(JSONObject().put("username","maya").put("path","Album/no.mp3").put("size",100))
         transport.emit(JSONObject().put("type","search_batch").put("id",id).put("files",files))
         transport.emit(JSONObject().put("type","search_done").put("id",id))
         await("bounded completed result set") {repo.searchStatus.value.phase==SearchPhase.COMPLETE}
-        assertEquals(5000,repo.searchResults.value.size)
+        assertEquals(app.runout.soulseek.SearchTerms.MAX_RESULTS,repo.searchResults.value.size)
         assertTrue(repo.searchStatus.value.limited)
         assertFalse(repo.searching.value)
     }

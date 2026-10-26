@@ -101,13 +101,32 @@ class DropsRepository(
             }
         }
         _state.value = DropState.Loading
-        val body = http.get(searchUrl(pageFor(index), stable = index >= STABLE_FROM))?.toString(Charsets.UTF_8)
+        val stable = index >= STABLE_FROM
+        // The stable pick draws on every album published before this Friday: a pool whose size
+        // can't move during the week, so everyone lands on the same page.
+        val before = if (stable) opens(index) else null
+        val page = if (!stable) pageFor(index) else {
+            val total = http.get(searchUrl(1, stable = true, before = before, rows = 0))?.toString(Charsets.UTF_8)
+                ?.let { runCatching { JSONObject(it).getJSONObject("response").optLong("numFound") }.getOrNull() }
+            if (total == null) {
+                _state.value = DropState.Failed("Couldn't reach Internet Archive. Check your connection.")
+                return@withContext _state.value
+            }
+            pageFor(index, pages = (total + ROWS - 1) / ROWS)
+        }
+        val body = http.get(searchUrl(page, stable = stable, before = before))?.toString(Charsets.UTF_8)
         if (body == null) {
             _state.value = DropState.Failed("Couldn't reach Internet Archive. Check your connection.")
             return@withContext _state.value
         }
         val docs = runCatching { parseSearch(body) }.getOrElse {
             _state.value = DropState.Failed("Internet Archive sent something unexpected.")
+            return@withContext _state.value
+        }
+        // An empty page is the archive having a moment, not a week without albums: say so, and
+        // keep nothing, so the next try fetches again instead of showing an empty week till Friday.
+        if (docs.isEmpty()) {
+            _state.value = DropState.Failed("Internet Archive sent an empty list. Try again in a bit.")
             return@withContext _state.value
         }
         val week = DropWeek(index, opens(index), opens(index).plusDays(7), pickFor(index, docs))
@@ -270,10 +289,12 @@ class DropsRepository(
          * different days saw different albums. Earlier weeks keep that pick so nobody's week changes.
          */
         const val STABLE_FROM = 2965L // Friday 30 October 2026
-        /** Pages of the stable ordering to draw from: the archive's oldest 10,000 such albums. */
+        /** Pages before the pool's size is known; the stable pick asks the archive how many there are. */
         const val STABLE_PAGES = 100L
 
-        fun pageFor(index: Long): Int = 1 + (seed(index) % (if (index >= STABLE_FROM) STABLE_PAGES else PAGES)).toInt()
+        /** The week's page among [pages]: the most-downloaded 20 before [STABLE_FROM], the whole pool after. */
+        fun pageFor(index: Long, pages: Long = if (index >= STABLE_FROM) STABLE_PAGES else PAGES): Int =
+            1 + (seed(index) % pages.coerceAtLeast(1)).toInt()
 
         fun pickFor(index: Long, docs: List<DropItem>): List<DropItem> =
             if (index >= STABLE_FROM) pickStable(docs, index) else pick(docs, seed(index))
@@ -282,13 +303,14 @@ class DropsRepository(
          * [stable]: by the date each album went public, oldest first, which new uploads don't reorder,
          * so a page holds the same albums all week. Before [STABLE_FROM]: most downloaded first.
          */
-        fun searchUrl(page: Int, stable: Boolean = false): String {
+        fun searchUrl(page: Int, stable: Boolean = false, before: LocalDate? = null, rows: Int = ROWS): String {
             // Only albums the archive lists with FLAC files, so every drop can be claimed.
-            val q = "collection:netlabels AND mediatype:audio AND licenseurl:*creativecommons* AND format:flac"
+            val q = "collection:netlabels AND mediatype:audio AND licenseurl:*creativecommons* AND format:flac" +
+                (before?.let { " AND publicdate:[* TO ${it}T00:00:00Z]" } ?: "")
             val sort = if (stable) "publicdate+asc" else "downloads+desc"
             return "https://archive.org/advancedsearch.php?q=" + URLEncoder.encode(q, "UTF-8") +
                 listOf("identifier", "title", "creator", "year", "licenseurl").joinToString("") { "&fl%5B%5D=$it" } +
-                "&sort%5B%5D=$sort&rows=$ROWS&page=$page&output=json"
+                "&sort%5B%5D=$sort&rows=$rows&page=$page&output=json"
         }
 
         /**

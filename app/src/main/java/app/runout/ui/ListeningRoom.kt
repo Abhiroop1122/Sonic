@@ -179,6 +179,8 @@ data class RoomState(
     val soulseekSearching: Boolean = false,
     val soulseekTransfers: List<SoulseekTransfer> = emptyList(),
     val soulseekUploads: List<SoulseekUpload> = emptyList(),
+    /** Uploaded and downloaded so far by this account (Settings › Soulseek). */
+    val soulseekTotals: app.runout.soulseek.TransferTotals = app.runout.soulseek.TransferTotals(),
     val soulseekContacts: List<SoulseekContact> = emptyList(),
     val soulseekConversations: List<SoulseekConversation> = emptyList(),
     val soulseekConversation: String? = null,
@@ -199,6 +201,12 @@ data class RoomState(
     val onboardingStep: Int = 0,
     val coverLookupEnabled: Boolean = false,
     val coverLookupNoticePending: Boolean = false,
+    /** Asked once after the first Soulseek album: share the download folder? */
+    val soulseekShareOffer: Boolean = false,
+    /** A friend's shelf open in Friends. */
+    val soulseekShelf: app.runout.soulseek.SoulseekShelf? = null,
+    /** This version's notes, on the first launch after an update or from About. */
+    val whatsNew: app.runout.update.WhatsNew.Section? = null,
     val turtleMode: Boolean = false,
     /** This week's Friday Drop hasn't been opened yet. */
     val newDrop: Boolean = false,
@@ -237,6 +245,7 @@ interface RoomActions : DeckActions {
     /** Settings › Library › Repair local albums: rebuild the shelf from the folder alone. */
     fun repairLibrary() { rescan() }
     fun setCoverLookupEnabled(enabled: Boolean) {}
+    fun answerShareOffer(share: Boolean) {}
     fun dismissCoverLookupNotice() {}
     fun load(album: Album)
     /** The disc has just been set down on the spindle: the soft thud of it seating. */
@@ -347,6 +356,10 @@ interface RoomActions : DeckActions {
     fun previewSoulseekFolder(result: SoulseekSearchResult) { downloadSoulseekFolder(result) }
     /** Lists one folder on a peer's share by name, as a record card sent in a chat names it. */
     fun openSoulseekFolder(username: String, directory: String) {}
+    fun browseSoulseekShelf(username: String) {}
+    fun showWhatsNew() {}
+    fun dismissWhatsNew() {}
+    fun closeSoulseekShelf() {}
     fun confirmSoulseekFolder() {}
     fun closeSoulseekFolder() {}
     fun setSearchQuery(value: String) {}
@@ -1324,13 +1337,27 @@ fun RoomScreen(
 
         // The room's first-time helps.
         Box(Modifier.fillMaxSize().zIndex(if (roomHelp != null) 31f else -1f)) { TeHelpSheet(roomHelp) { roomHelp = null } }
+        // What's new: over everything but onboarding, until "got it".
+        val notes = state.whatsNew?.takeIf { !setupOpen }
+        Box(Modifier.fillMaxSize().zIndex(if (notes != null) 32f else -1f)) { WhatsNewSheet(notes, actions::dismissWhatsNew) }
 
         // Notes: one toast at a time. The cover notice waits for OK; a Soulseek problem stays until
         // it's tapped away; anything else fades after a few seconds.
         val notice = state.coverLookupNoticePending && !setupOpen
-        val msg = if (setupOpen) null else state.message
-        val problem = state.soulseekError?.takeIf { panel == null && !setupOpen }
-        if (notice || msg != null || problem != null) {
+        val offer = state.soulseekShareOffer && !setupOpen && !notice
+        val msg = if (setupOpen || offer) null else state.message
+        val problem = state.soulseekError?.takeIf { panel == null && !setupOpen && !offer }
+        if (offer) TeToast(
+            "your first soulseek album is in. share the flac albums you download, so others can get them from you too? " +
+                "only that folder, only flac, only on wi-fi. change it any time in settings › soulseek.",
+            Room.Accent, toastAt.zIndex(20f).testTag("share-offer"),
+        ) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TeLink("share", { actions.answerShareOffer(true) }, tag = "share-offer:yes", arrow = "", color = Color.White)
+                TeLink("not now", { actions.answerShareOffer(false) }, tag = "share-offer:no", arrow = "", color = Color.White)
+            }
+        }
+        else if (notice || msg != null || problem != null) {
             if (!notice && msg != null) LaunchedEffect(msg) {
                 delay(4_500)
                 actions.dismissMessage()

@@ -15,7 +15,7 @@ plugins {
  * after the release before it and before its own release:
  * major × 1,000,000 + minor × 10,000 + patch × 100 + (the dev number, or 99 for a release).
  */
-val sonicVersion = "1.2.0"
+val sonicVersion = "1.3.0"
 
 fun versionCodeOf(name: String): Int {
     val m = Regex("""^(\d+)\.(\d+)\.(\d+)(?:-dev\.(\d+))?$""").matchEntire(name)
@@ -72,6 +72,8 @@ android {
     }
 
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/soulseekJni"))
+    // CHANGELOG.md ships inside the app: the first launch after an update shows its section.
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/changelogAssets"))
     sourceSets.getByName("androidTest").assets.srcDir("src/test/resources/fixtures")
 
     testOptions {
@@ -159,3 +161,10 @@ val buildSoulseekNative by tasks.registering(Exec::class) {
     outputs.dir(layout.buildDirectory.dir("generated/soulseekJni"))
 }
 tasks.named("preBuild").configure { dependsOn(buildSoulseekNative) }
+
+val copyChangelog by tasks.registering(Copy::class) {
+    description = "Bundle CHANGELOG.md for the after-update what's new."
+    from(rootProject.file("CHANGELOG.md"))
+    into(layout.buildDirectory.dir("generated/changelogAssets"))
+}
+tasks.named("preBuild").configure { dependsOn(copyChangelog) }

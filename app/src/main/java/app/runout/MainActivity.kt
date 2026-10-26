@@ -124,6 +124,9 @@ class MainActivity : ComponentActivity() {
             val searching by graph.soulseek.searching.collectAsStateWithLifecycle()
             val transfers by graph.soulseek.transfers.collectAsStateWithLifecycle()
             val uploads by graph.soulseek.uploads.collectAsStateWithLifecycle()
+            val totals by graph.soulseek.totals.collectAsStateWithLifecycle()
+            val shareOffer by graph.soulseek.shareOffer.collectAsStateWithLifecycle()
+            val shelf by graph.soulseek.shelf.collectAsStateWithLifecycle()
             val contacts by graph.soulseek.contacts.collectAsStateWithLifecycle()
             val conversations by graph.soulseek.conversations.collectAsStateWithLifecycle()
             val destination by graph.soulseek.destination.collectAsStateWithLifecycle()
@@ -137,6 +140,9 @@ class MainActivity : ComponentActivity() {
             val searchStatus by graph.soulseek.searchStatus.collectAsStateWithLifecycle()
             val folderPreview by graph.soulseek.folderPreview.collectAsStateWithLifecycle()
             val onboardingComplete by graph.soulseek.preferences.onboarded.collectAsStateWithLifecycle()
+            val whatsNew by graph.whatsNew.section.collectAsStateWithLifecycle()
+            // The first launch after an update shows its notes; onboarding counts as seen.
+            LaunchedEffect(onboardingComplete) { graph.whatsNew.checkOnLaunch(onboardingComplete) }
             val onboardingStep by graph.soulseek.preferences.step.collectAsStateWithLifecycle()
             val settingsRevision by graph.soulseek.preferences.revision.collectAsStateWithLifecycle()
             val shareConsent = remember(settingsRevision,session.username) { session.username?.let(graph.soulseek.preferences::sharing) ?: false }
@@ -213,6 +219,7 @@ class MainActivity : ComponentActivity() {
                     override fun repairLibrary() { graph.library.repair() }
                     override fun setCoverLookupEnabled(enabled: Boolean) { graph.library.setCoverLookupEnabled(enabled) }
                     override fun dismissCoverLookupNotice() { graph.library.dismissCoverLookupNotice() }
+                    override fun answerShareOffer(share: Boolean) { graph.soulseek.answerShareOffer(share) }
                     override fun load(album: Album) = graph.deck.load(album)
                     override fun discLanded() = graph.deck.discLanded()
                     override fun cueTrack(album: Album, trackId: String?) = graph.deck.cueTrack(album, trackId)
@@ -263,6 +270,8 @@ class MainActivity : ComponentActivity() {
                     override fun setDeckLights(on: Boolean) = graph.look.setDeckLights(on)
                     override fun setVinylOnly(on: Boolean) = graph.look.setVinylOnly(on)
                     override fun checkForUpdates() { graph.scope.launch { graph.updates.check() } }
+                    override fun showWhatsNew() = graph.whatsNew.show()
+                    override fun dismissWhatsNew() = graph.whatsNew.dismiss()
                     override fun setAutoUpdates(enabled: Boolean) = graph.updates.setAuto(enabled)
                     override fun setUpdateChannel(channel: app.runout.update.UpdateChannel) = graph.updates.setChannel(channel)
                     override fun setBluetoothCodec(enabled: Boolean) {
@@ -345,6 +354,8 @@ class MainActivity : ComponentActivity() {
                     override fun disconnectSoulseek() { graph.soulseek.disconnectFromNotification() }
                     override fun previewSoulseekFolder(result: SoulseekSearchResult) { graph.soulseek.previewFolder(result) }
                     override fun openSoulseekFolder(username: String, directory: String) { graph.soulseek.previewFolder(username, directory) }
+                    override fun browseSoulseekShelf(username: String) { graph.soulseek.browseShelf(username) }
+                    override fun closeSoulseekShelf() = graph.soulseek.closeShelf()
                     override fun confirmSoulseekFolder() { graph.soulseek.confirmFolderDownload() }
                     override fun closeSoulseekFolder() { graph.soulseek.closeFolderPreview() }
                     override fun setSearchQuery(value: String) { graph.discovery.setQuery(value) }
@@ -382,6 +393,10 @@ class MainActivity : ComponentActivity() {
                     soulseekSearching = searching,
                     soulseekTransfers = transfers,
                     soulseekUploads = uploads,
+                    soulseekTotals = totals,
+                    soulseekShareOffer = shareOffer,
+                    soulseekShelf = shelf,
+                    whatsNew = whatsNew,
                     soulseekContacts = contacts,
                     soulseekConversations = conversations,
                     soulseekConversation = selectedConversation,

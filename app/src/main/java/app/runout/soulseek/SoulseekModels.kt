@@ -22,7 +22,15 @@ data class SoulseekSession(
     val hasAccount: Boolean get() = authenticated && !username.isNullOrBlank()
 }
 enum class SearchPhase { IDLE, SEARCHING, COMPLETE, CANCELLED, FAILED, INTERRUPTED }
-data class SoulseekSearchStatus(val id: String? = null, val query: String = "", val phase: SearchPhase = SearchPhase.IDLE, val limited: Boolean = false, val error: String? = null)
+/** [widened]: no one answered the words as typed, so the search went out again with one word left out at a time. */
+data class SoulseekSearchStatus(val id: String? = null, val query: String = "", val phase: SearchPhase = SearchPhase.IDLE, val limited: Boolean = false, val error: String? = null, val widened: Boolean = false)
+/** A friend's shelf: the FLAC folders they share, from one browse of their whole share. */
+data class SoulseekShelf(val requestId: String, val username: String, val folders: List<ShelfFolder> = emptyList(), val loading: Boolean = true, val error: String? = null)
+data class ShelfFolder(val directory: String, val tracks: List<SoulseekSearchResult>) {
+    val title: String get() = directory.substringAfterLast('/').ifBlank { directory }
+    val parent: String get() = directory.substringBeforeLast('/', "")
+    val size: Long get() = tracks.sumOf { it.size }
+}
 data class SoulseekFolderPreview(val requestId: String, val username: String, val directory: String, val files: List<SoulseekSearchResult> = emptyList(), val loading: Boolean = true, val error: String? = null)
 
 data class SoulseekSearchResult(
@@ -106,10 +114,14 @@ object SoulseekPolicy {
     /** What a native download error means for the next step. Unknown errors are treated as passing. */
     fun failureKind(error: String?): FailureKind = when {
         error == null -> FailureKind.PEER_AWAY
+        // A full queue at their end ("Too many files", "Too many megabytes", a user limit, a client
+        // shutting down) means later, not never: ask the same peer again, as Nicotine+ re-queues.
+        busy.any { error.contains(it, ignoreCase = true) } -> FailureKind.PEER_AWAY
         refusals.any { error.contains(it, ignoreCase = true) } -> FailureKind.REFUSED
         else -> FailureKind.PEER_AWAY
     }
-    private val refusals = listOf("upload failed on the other side", "declined", "not shared", "denied", "banned", "too many", "file not found", "no such file")
+    private val busy = listOf("too many files", "too many megabytes", "user limit", "pending shutdown")
+    private val refusals = listOf("upload failed on the other side", "other side refused", "declined", "not shared", "denied", "banned", "too many", "file not found", "no such file")
 
     /** A file as a track key: no folder, saved-name prefix, extension, leading number or punctuation. */
     fun fileKey(path: String): String = path.replace('\\', '/').substringAfterLast('/').substringBeforeLast('.')
@@ -162,5 +174,47 @@ object SoulseekPolicy {
     }
     fun validUsername(value: String): Boolean = value.isNotBlank() && value.length <= 30 && value == value.trim() && value.all { it.code in 32..126 }
     fun safeName(value: String, fallback: String = "Music"): String = value.replace(Regex("[\\\\/:*?\"<>|\\p{Cntrl}]"), "_").trim().trim('.').take(120).ifBlank { fallback }
+    /**
+     * [safeName] for a file: a long name is shortened before its extension, never through it. Cut at
+     * 120 characters, a long track name lost its ".flac", and the bridge refused the whole share.
+     */
+    fun safeFileName(value: String, fallback: String = "Track.flac"): String {
+        val at = value.lastIndexOf('.')
+        if (at == 0) return fallback // only an extension: no name to keep
+        val dot = at.takeIf { it > 0 && value.length - it <= 10 } ?: return safeName(value, fallback)
+        val ext = safeName(value.substring(dot + 1), "").lowercase()
+        if (ext.isEmpty()) return safeName(value, fallback)
+        val base = safeName(value.substring(0, dot), "").take(120 - ext.length - 1)
+        return if (base.isBlank()) fallback else "$base.$ext"
+    }
     fun messageId(owner: String, serverId: Long): String = accountKey(owner, "incoming:$serverId")
+}
+
+/**
+ * What a Dig search sends. Punctuation goes (some clients answer nothing when it's there, as
+ * Nicotine+ notes), "flac" joins the words so peers send only FLAC files, and the variants leave
+ * one word out at a time: the server silently drops searches for some names (any search holding
+ * both "frank" and "ocean" reaches no one), and one word less gets past it. Results are still
+ * kept only when the folder matches every word typed.
+ */
+object SearchTerms {
+    private val PUNCTUATION = Regex("[!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~–—‐’“”…]")
+    /** Most results a Dig search collects. */
+    const val MAX_RESULTS = 15_000
+
+    fun words(text: String): List<String> = text.replace(PUNCTUATION, " ").split(' ').filter { it.isNotBlank() }
+
+    private fun withFlac(words: List<String>): String =
+        (if (words.any { it.equals("flac", ignoreCase = true) }) words else words + "flac").joinToString(" ")
+
+    /** The words as typed, cleaned, with "flac". */
+    fun network(text: String): String = words(text).ifEmpty { listOf(text.trim()) }.let(::withFlac)
+
+    /** One word left out at a time, longest words kept first; none for a single word. */
+    fun variants(text: String): List<String> {
+        val ws = words(text).filterNot { it.equals("flac", ignoreCase = true) }
+        if (ws.size < 2) return emptyList()
+        return ws.indices.sortedBy { ws[it].length }.map { i -> withFlac(ws.filterIndexed { j, _ -> j != i }) }
+            .distinct().filter { it != network(text) }.take(4)
+    }
 }

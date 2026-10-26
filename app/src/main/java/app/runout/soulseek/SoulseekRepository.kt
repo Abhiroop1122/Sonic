@@ -52,6 +52,8 @@ private const val AUTO_RESUME_DELAY_MS = 2_000L
 private const val AUTO_RESUME_LIMIT = 3
 /** How long one search for another copy of a failed file listens for answers. */
 private const val SEEK_TIMEOUT_MS = 20_000L
+/** A search no one has answered after this long is widened (see [SearchTerms.variants]). */
+private const val WIDEN_AFTER_MS = 6_000L
 /** How many times a search for another copy starts over after a search of yours cut it short. */
 private const val SEEK_ATTEMPTS = 3
 /** Said of a failed download once no one else turned out to share the identical file. */
@@ -119,6 +121,18 @@ class SoulseekRepository(
     private val _transfers = MutableStateFlow<List<SoulseekTransfer>>(emptyList())
     val transfers = _transfers.asStateFlow()
     private val _uploads = MutableStateFlow<List<SoulseekUpload>>(emptyList())
+    private val _totals = MutableStateFlow(TransferTotals())
+    /** Uploaded and downloaded so far by the signed-in account (Settings › Soulseek). */
+    val totals: StateFlow<TransferTotals> = _totals.asStateFlow()
+    private val _shelf = MutableStateFlow<SoulseekShelf?>(null)
+    /** The friend's shelf open in Friends, while it loads and after. */
+    val shelf: StateFlow<SoulseekShelf?> = _shelf.asStateFlow()
+    private val _shareOffer = MutableStateFlow(false)
+    /**
+     * The first album has come in and nothing is shared yet: Sonic asks, once, whether to share the
+     * download folder. Peers treat people who share nothing as leechers; nothing is shared without a yes.
+     */
+    val shareOffer: StateFlow<Boolean> = _shareOffer.asStateFlow()
     val uploads = _uploads.asStateFlow()
     private val _contacts = MutableStateFlow<List<SoulseekContact>>(emptyList())
     val contacts = _contacts.asStateFlow()
@@ -217,7 +231,7 @@ class SoulseekRepository(
         // Seeks pick up again at the next sign-in; their rows keep saying what they were doing.
         seekJobs.values.forEach { it.cancel() }; seekJobs.clear()
         repairSearches.values.forEach { it.done.complete(true) }
-        activeTransfers.clear(); _uploads.value = emptyList(); pendingBrowse.clear(); _folderPreview.value = null
+        activeTransfers.clear(); _uploads.value = emptyList(); pendingBrowse.clear(); _folderPreview.value = null; _shelf.value = null
         searchMutex.withLock {
             searchId = null; _searching.value = false
             if (_searchStatus.value.phase == SearchPhase.SEARCHING) _searchStatus.update { it.copy(phase = SearchPhase.INTERRUPTED, error = reason) }
@@ -245,7 +259,13 @@ class SoulseekRepository(
         val id = UUID.randomUUID().toString(); searchId = id
         searchIndex.clear(); _searchResults.value = emptyList(); _searching.value = true
         _searchStatus.value = SoulseekSearchStatus(id, text, SearchPhase.SEARCHING)
-        try { command("search") { put("id", id); put("query", text); put("timeoutMs", 30000) } }
+        try {
+            command("search") {
+                put("id", id); put("query", text); put("timeoutMs", 30000)
+                put("queries", JSONArray(listOf(SearchTerms.network(text))))
+                put("variants", JSONArray(SearchTerms.variants(text))); put("widenAfterMs", WIDEN_AFTER_MS)
+            }
+        }
         catch (e: Exception) { _searching.value = false; _searchStatus.update { it.copy(phase = SearchPhase.FAILED, error = friendly(e)) }; throw e }
     } }
     /** Dig left behind: the search stopped and its results gone, so Dig opens on its own page. */
@@ -260,6 +280,15 @@ class SoulseekRepository(
         _searchStatus.update { it.copy(phase = SearchPhase.CANCELLED) }
     } }
     fun removeAlbum(id: String): Job = work { dao.removeAlbum(id) }
+    /** The once-only question answered: yes shares the download folder (FLAC only, Wi-Fi only unless changed). */
+    fun answerShareOffer(share: Boolean): Job = work {
+        val owner = session.value.username ?: return@work
+        preferences.setShareAsked(owner); _shareOffer.value = false
+        if (!share) return@work
+        val folder = _destination.value ?: return@work
+        setSharedFolder(folder).join()
+        setSharing(true).join()
+    }
     fun download(result: SoulseekSearchResult): Job = work { enqueue(result) }
     /**
      * Just these tracks of a folder, into [albumId]'s folder and record when it's an album Runout
@@ -279,6 +308,14 @@ class SoulseekRepository(
         command("browse") { put("id", id); put("username", username); put("directory", directory) }
     }
     fun closeFolderPreview() { pendingBrowse.clear(); _folderPreview.value = null }
+    /** Everything [username] shares, FLAC only, as folders: Friends › a friend › their shelf. */
+    fun browseShelf(username: String): Job = work {
+        requireSignedIn()
+        val id = UUID.randomUUID().toString(); pendingBrowse[id] = BrowseRequest(username, "")
+        _shelf.value = SoulseekShelf(id, username)
+        command("browse") { put("id", id); put("username", username); put("directory", "") }
+    }
+    fun closeShelf() { _shelf.value?.let { pendingBrowse.remove(it.requestId) }; _shelf.value = null }
     fun confirmFolderDownload(): Job = work {
         val preview = folderPreview.value ?: return@work
         check(!preview.loading && preview.error == null) { "Wait for the complete folder listing first." }
@@ -489,7 +526,8 @@ class SoulseekRepository(
                 if (depth > 64 || !visited.add(dir.uri.toString())) return
                 dir.listFiles().forEach { doc ->
                     val name = doc.name ?: return@forEach
-                    val virtual = if (prefix.isEmpty()) SoulseekPolicy.safeName(name) else prefix + "\\" + SoulseekPolicy.safeName(name)
+                    val safe = if (doc.isDirectory) SoulseekPolicy.safeName(name) else SoulseekPolicy.safeFileName(name)
+                    val virtual = if (prefix.isEmpty()) safe else prefix + "\\" + safe
                     if (doc.isDirectory) visit(doc, virtual, depth + 1)
                     else if (doc.isFile && FlacPolicy.isFlacName(name)) {
                         val info = FlacPolicy.read(context, doc.uri, name) ?: return@forEach
@@ -655,6 +693,7 @@ class SoulseekRepository(
                     clearSessionError()
                     observeOwner(owner)
                     _sharedFolder.value = preferences.sharedFolder(owner)?.let(Uri::parse)
+                    _totals.value = preferences.totals(owner)
                     if (backgroundConsented()) {
                         try { startService(SoulseekOnlineService::class.java); _stayOnline.value = true }
                         catch (_: RuntimeException) { _error.value = "Background connection is unavailable. Open Account to check notification permission." }
@@ -678,7 +717,7 @@ class SoulseekRepository(
                     for (i in 0 until files.length()) {
                         val file = files.getJSONObject(i)
                         val result = parseResult(file, file.optString("username", event.optString("username")))
-                        if (FlacPolicy.isFlacName(result.fileName) && result.size > 0 && search.results.size < 5000) search.results += result
+                        if (FlacPolicy.isFlacName(result.fileName) && result.size > 0 && search.results.size < SearchTerms.MAX_RESULTS) search.results += result
                     }
                     return
                 }
@@ -687,19 +726,35 @@ class SoulseekRepository(
                 for (i in 0 until files.length()) {
                     val file = files.getJSONObject(i)
                     val result = parseResult(file, file.optString("username", event.optString("username")))
-                    if (FlacPolicy.isFlacName(result.fileName) && result.size > 0 && searchIndex.size < 5000) searchIndex.putIfAbsent(result.id, result)
+                    if (FlacPolicy.isFlacName(result.fileName) && result.size > 0 && searchIndex.size < SearchTerms.MAX_RESULTS) searchIndex.putIfAbsent(result.id, result)
                 }
                 _searchResults.value = searchIndex.values.toList()
                 } }
             }
-            "search_done" -> repairSearches[event.optString("id")]?.done?.complete(event.optBoolean("cancelled")) ?: searchMutex.withLock { if (event.optString("id") == searchId) {
-                _searching.value = false
-                _searchStatus.update { it.copy(phase = if (event.optBoolean("cancelled")) SearchPhase.CANCELLED else SearchPhase.COMPLETE, limited = event.optBoolean("limited") || searchIndex.size >= 5000) }
-            } }
+            "search_widened" -> searchMutex.withLock { if (event.optString("id") == searchId) _searchStatus.update { it.copy(widened = true) } }
+            "search_done" -> {
+                // What the network gave and what the door turned away, for diagnosing searches that come back thin.
+                android.util.Log.i("SonicSearch", "done in ${event.optLong("elapsedMs")} ms: ${event.optInt("peerReplies")} replies, " +
+                    "${event.optInt("rawFiles")} files, peers admitted ${event.optLong("peersAdmitted")}, refused ${event.optLong("peersRefused")}")
+                repairSearches[event.optString("id")]?.done?.complete(event.optBoolean("cancelled")) ?: searchMutex.withLock { if (event.optString("id") == searchId) {
+                    _searching.value = false
+                    _searchStatus.update { it.copy(phase = if (event.optBoolean("cancelled")) SearchPhase.CANCELLED else SearchPhase.COMPLETE, limited = event.optBoolean("limited") || searchIndex.size >= SearchTerms.MAX_RESULTS, widened = it.widened || event.optBoolean("widened")) }
+                } }
+            }
             "browse_result" -> {
                 val requested = pendingBrowse.remove(event.optString("id")) ?: return
                 if (event.optString("username") != requested.username || event.optString("directory").replace('\\', '/') != requested.directory) return
                 val files = event.optJSONArray("files") ?: JSONArray()
+                if (requested.directory.isEmpty()) {
+                    // A whole share: its FLAC files as folders, the way Dig shows a search.
+                    val folders = (0 until files.length()).map { parseResult(files.getJSONObject(it), requested.username) }
+                        .filter { FlacPolicy.isFlacName(it.fileName) && it.size > 0 }.distinctBy { it.id }
+                        .groupBy { it.directory }
+                        .map { (dir, tracks) -> ShelfFolder(dir, tracks.sortedBy { it.fileName.lowercase(java.util.Locale.ROOT) }) }
+                        .sortedBy { it.directory.lowercase(java.util.Locale.ROOT) }
+                    if (_shelf.value?.requestId == event.optString("id")) _shelf.value = SoulseekShelf(event.optString("id"), requested.username, folders, loading = false)
+                    return
+                }
                 val valid = (0 until files.length()).map { parseResult(files.getJSONObject(it), requested.username) }
                     .filter { it.directory == requested.directory && FlacPolicy.isFlacName(it.fileName) && it.size > 0 }.distinctBy { it.id }
                     .sortedWith(compareBy({ it.fileName.lowercase(java.util.Locale.ROOT) }, { it.path }))
@@ -732,7 +787,11 @@ class SoulseekRepository(
                 heldProgress.remove(id)
                 dao.putTransfer(next)
                 if (next.state in PROGRESS_STATES) progressWritten[id] = nowMs() else progressWritten.remove(id)
-                if (state == "COMPLETED") { activeTransfers.remove(id); publishAsync(updated) }
+                if (state == "COMPLETED") {
+                    activeTransfers.remove(id); publishAsync(updated)
+                    _totals.value = preferences.addTotals(owner, downBytes = row.size, downFiles = 1)
+                    if (!preferences.shareAsked(owner) && !preferences.sharing(owner) && _destination.value != null) _shareOffer.value = true
+                }
                 if (state == "FAILED" || state == "CANCELLED" || state == "PAUSED") activeTransfers.remove(id)
                 if (state == "COMPLETED" || state == "FAILED" || state == "CANCELLED" || state == "PAUSED") pumpQueue()
                 if (interrupted) scheduleAutoResume(id)
@@ -752,7 +811,12 @@ class SoulseekRepository(
             "message_sent" -> dao.messageState(event.getString("clientId"), "SENT")
             "upload" -> {
                 val upload = SoulseekUpload(event.getString("username"), event.getString("path"), event.optLong("bytes"), event.optLong("total"), event.optString("state"))
-                val previous = _uploads.value.firstOrNull { it.username == upload.username && it.path == upload.path }?.state
+                val before = _uploads.value.firstOrNull { it.username == upload.username && it.path == upload.path }
+                val previous = before?.state
+                // Every byte that went out counts, a broken-off upload's too; a finished one adds a file.
+                val sent = (upload.bytes - (before?.bytes ?: 0)).coerceAtLeast(0)
+                val finished = upload.state == "completed" && previous != "completed"
+                if (sent > 0 || finished) _totals.value = preferences.addTotals(owner, upBytes = sent, upFiles = if (finished) 1 else 0)
                 _uploads.update { list -> (list.filterNot { it.username == upload.username && it.path == upload.path } + upload).takeLast(100) }
                 val serving = setOf("uploading", "queued")
                 when {
@@ -774,6 +838,7 @@ class SoulseekRepository(
                 if (event.optString("operation") == "message" && id.isNotBlank()) dao.messageState(id, "FAILED")
                 if (id == searchId) { _searching.value = false; _searchStatus.update { it.copy(phase = SearchPhase.FAILED, error = message) } }
                 if (id == folderPreview.value?.requestId) _folderPreview.update { it?.copy(loading = false, error = message) }
+                if (id == _shelf.value?.requestId) { _shelf.update { it?.copy(loading = false, error = message) }; pendingBrowse.remove(id); return }
                 pendingBrowse.remove(id); _error.value = message
             }
         }
@@ -813,7 +878,7 @@ class SoulseekRepository(
         val albumTitle = aimed?.title ?: info.album ?: remoteDirectory.substringAfterLast('/').ifBlank { "Soulseek downloads" }
         val folder = storage.albumDirectory(albumTitle, albumId)
         var row = dao.transfer(initial.id) ?: return@withLock
-        val finalName = initial.id.take(10) + " " + SoulseekPolicy.safeName(stage.name, "Track.flac")
+        val finalName = initial.id.take(10) + " " + SoulseekPolicy.safeFileName(stage.name)
         val partialName = ".${initial.id}.sonic-part"
         val target = row.publishedUri?.let { DocumentFile.fromSingleUri(context, Uri.parse(it)) }?.takeIf { it.exists() }
             ?: folder.findFile(partialName)
@@ -990,7 +1055,7 @@ class SoulseekRepository(
             check(session.value.username == expectedOwner && generation == expectedGeneration) { "The Soulseek account changed. Retry this download." }
             val source = if (track.uri.startsWith("file:")) File(Uri.parse(track.uri).path!!) else File(stagingDir, track.fileName)
             require(source.canonicalFile.parentFile == stagingDir.canonicalFile && FlacPolicy.read(source) != null) { "Internet Archive supplied an invalid FLAC file." }
-            val name = SoulseekPolicy.safeName(track.fileName.ifBlank { source.name }, "Track.flac")
+            val name = SoulseekPolicy.safeFileName(track.fileName.ifBlank { source.name })
             val partialName = ".sonic-${SoulseekPolicy.digest(album.id).take(16)}-$index.part"
             val target = folder.findFile(name)?.takeIf { it.isFile } ?: folder.findFile(partialName) ?: folder.createFile("application/octet-stream", partialName) ?: throw IOException("Could not create a file in your download folder.")
             storage.copyValidated(source, target.uri, source.length())

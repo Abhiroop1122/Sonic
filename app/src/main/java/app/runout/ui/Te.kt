@@ -1,5 +1,6 @@
 package app.runout.ui
 
+import androidx.compose.ui.text.withStyle
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.animation.fadeOut
@@ -360,6 +361,51 @@ private fun HelpPoints(points: List<String>) {
             }
         }
     }
+}
+
+/**
+ * What's new: this version's section of CHANGELOG.md in a help panel's dress. Bullets numbered,
+ * the ones under them indented; **bold** and `code` read as they do on GitHub.
+ */
+@Composable
+fun WhatsNewSheet(notes: app.runout.update.WhatsNew.Section?, onClose: () -> Unit) {
+    if (notes == null) return
+    PageSheet("whats-new:${notes.version}", onClose) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            BasicText("what's new" + (notes.date?.let { " · $it" } ?: ""), style = Room.Label.copy(color = Room.Accent), modifier = Modifier.weight(1f))
+            CloseKey(onClose)
+        }
+        BasicText("SONIC ${notes.version}", style = Room.Title, modifier = Modifier.fillMaxWidth().semantics { heading() }.testTag("whats-new-title"))
+        notes.lede?.let { BasicText(markdownLine(it), style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp)) }
+        Column(Modifier.fillMaxWidth().testTag("whats-new")) {
+            var n = 0
+            notes.items.forEach { item ->
+                Row(
+                    Modifier.fillMaxWidth().then(if (item.depth == 0) Modifier.hairlineTop() else Modifier).padding(start = if (item.depth == 0) 0.dp else 33.dp, top = 11.dp, bottom = if (item.depth == 0) 11.dp else 0.dp),
+                    horizontalArrangement = Arrangement.spacedBy(11.dp),
+                ) {
+                    BasicText(if (item.depth == 0) "%02d".format(++n) else "·", style = Room.LabelQuiet)
+                    BasicText(markdownLine(item.text), style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        TeButton("got it", onClose, Modifier.fillMaxWidth().testTag("whats-new-ok"))
+    }
+}
+
+/** A CHANGELOG line as text: **bold** in ink at 500, *italic* slanted, `code` and the marks themselves dropped. */
+private fun markdownLine(line: String): androidx.compose.ui.text.AnnotatedString = androidx.compose.ui.text.buildAnnotatedString {
+    val marks = Regex("\\*\\*(.+?)\\*\\*|\\*(.+?)\\*")
+    var at = 0
+    for (m in marks.findAll(line)) {
+        append(line.substring(at, m.range.first).replace("`", ""))
+        val bold = m.groupValues[1].isNotEmpty()
+        val style = if (bold) androidx.compose.ui.text.SpanStyle(color = Room.Ink, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+        else androidx.compose.ui.text.SpanStyle(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+        withStyle(style) { append((if (bold) m.groupValues[1] else m.groupValues[2]).replace("`", "")) }
+        at = m.range.last + 1
+    }
+    append(line.substring(at).replace("`", ""))
 }
 
 /** One help panel's words, from the TE · Help panels board. */
