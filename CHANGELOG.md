@@ -5,11 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## 1.3.1 (2026-10-26)
+## 1.4.0 (2026-10-26)
 
-All ten Friday Drops are new every week.
+Phones can reach each other, and when they can't, Sonic says why.
 
-- **Drops walk the pool.** From Friday 6 November each week steps a fixed stride through the archive's pages of Creative Commons FLAC albums, a stride that shares no factor with the page count. Two weeks in a row never read the same page, and every page comes round once (about two and a half years) before any comes back. Pages hold different albums, so the ten are all new each Friday, and still the same ten for everyone. Friday 30 October keeps the pick 1.3.0 gives it.
+- **Sonic opens a port on your router.** On Wi-Fi it asks the router to forward Sonic's port (NAT-PMP, then UPnP), keeps the forward alive, and removes it when you sign out or leave Wi-Fi. Two people behind home routers can now browse and download from each other. The port stays the same from one sign-in to the next.
+- **Settings › Soulseek › connection** says whether others can reach you:
+  - when the router won't open the port, the port and this phone's address to forward by hand;
+  - when your internet provider puts its own router in front of yours (CGNAT), which lets no one in, it says so: the router's outside address doesn't match the one the internet sees;
+  - on mobile data, that sharing waits for Wi-Fi.
+- **Uploads go the other way round.** When Sonic can't connect to someone downloading from you, it asks the Soulseek server to have them connect to you instead, as Nicotine+ does. If they don't come within 30 seconds, the slot goes to the next person.
+- **"Browse their shelf" in chat.** The album-share key in a chat is replaced by a key that opens their shelf. Cards sent before still open their folder.
+- **A shelf that doesn't open says why:** they're offline (at once, not after 30 seconds), neither of you could connect to the other (and whose port to open), they didn't answer, they share nothing, or they share files but no FLAC albums.
+- **All ten Friday Drops are new every week.** From Friday 6 November each week steps a fixed stride through the archive's pages of Creative Commons FLAC albums, a stride that shares no factor with the page count. Two weeks in a row never read the same page, and every page comes round once (about two and a half years) before any comes back. Friday 30 October keeps the pick 1.3.0 gives it.
 
 ---
 
