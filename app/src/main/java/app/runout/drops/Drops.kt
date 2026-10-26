@@ -106,13 +106,14 @@ class DropsRepository(
         // can't move during the week, so everyone lands on the same page.
         val before = if (stable) opens(index) else null
         val page = if (!stable) pageFor(index) else {
-            val total = http.get(searchUrl(1, stable = true, before = before, rows = 0))?.toString(Charsets.UTF_8)
-                ?.let { runCatching { JSONObject(it).getJSONObject("response").optLong("numFound") }.getOrNull() }
-            if (total == null) {
+            val pages = poolPages(index)
+            if (pages == null) {
                 _state.value = DropState.Failed("Couldn't reach Internet Archive. Check your connection.")
                 return@withContext _state.value
             }
-            pageFor(index, pages = (total + ROWS - 1) / ROWS)
+            // Last week's page, so this week can't land on it again: every one of the ten is new.
+            val previous = if (index - 1 >= STABLE_FROM) poolPages(index - 1)?.let { pageFor(index - 1, it) } else null
+            pageFor(index, pages, previous)
         }
         val body = http.get(searchUrl(page, stable = stable, before = before))?.toString(Charsets.UTF_8)
         if (body == null) {
@@ -135,6 +136,12 @@ class DropsRepository(
         _newDrop.value = false
         _state.value
     }
+
+    /** How many pages of [ROWS] the pool for week [index] fills: albums published before its Friday. */
+    private fun poolPages(index: Long): Long? =
+        http.get(searchUrl(1, stable = true, before = opens(index), rows = 0))?.toString(Charsets.UTF_8)
+            ?.let { runCatching { JSONObject(it).getJSONObject("response").optLong("numFound") }.getOrNull() }
+            ?.let { (it + ROWS - 1) / ROWS }
 
     /**
      * What's on a drop before you spend a claim: its FLAC tracks, each with a streaming address so a
@@ -292,9 +299,29 @@ class DropsRepository(
         /** Pages before the pool's size is known; the stable pick asks the archive how many there are. */
         const val STABLE_PAGES = 100L
 
-        /** The week's page among [pages]: the most-downloaded 20 before [STABLE_FROM], the whole pool after. */
-        fun pageFor(index: Long, pages: Long = if (index >= STABLE_FROM) STABLE_PAGES else PAGES): Int =
-            1 + (seed(index) % pages.coerceAtLeast(1)).toInt()
+        /**
+         * The first week that walks the pool: each week steps [STRIDE] pages on, a step that shares no
+         * factor with the page count, so weeks in a row never read the same page and every page comes
+         * round once before any comes back. Pages hold different albums, so all ten are new each week.
+         * 30 October keeps the page 1.3.0 gives it, so everyone sees the same ten that Friday.
+         */
+        const val WALK_FROM = 2966L // Friday 6 November 2026
+        private const val STRIDE = 7_919L
+
+        /**
+         * The week's page among [pages]: the most-downloaded 20 before [STABLE_FROM], the whole pool
+         * after, walked from [WALK_FROM]. [previous] is last week's page: never read twice running.
+         */
+        fun pageFor(index: Long, pages: Long = if (index >= STABLE_FROM) STABLE_PAGES else PAGES, previous: Int? = null): Int {
+            val n = pages.coerceAtLeast(1)
+            if (index < WALK_FROM) return 1 + (seed(index) % n).toInt()
+            var step = STRIDE % n
+            while (n > 1 && gcd(step, n) != 1L) step++
+            val page = 1 + ((index * step) % n).toInt()
+            return if (page == previous && n > 1) page % n.toInt() + 1 else page
+        }
+
+        private tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
 
         fun pickFor(index: Long, docs: List<DropItem>): List<DropItem> =
             if (index >= STABLE_FROM) pickStable(docs, index) else pick(docs, seed(index))

@@ -121,6 +121,23 @@ class FridayDropsTest {
     }
 
     @Test
+    fun `from 6 November the weeks walk the pool, so all ten are new every week`() {
+        val start = DropsRepository.WALK_FROM
+        for (n in listOf(126L, 127L, 130L, 200L)) {
+            val pages = (0 until n).map { DropsRepository.pageFor(start + it, n) }
+            assertEquals("every page comes round once before any repeats ($n pages)", n.toInt(), pages.toSet().size)
+            assertTrue(pages.zipWithNext().none { (a, b) -> a == b })
+            assertTrue(pages.all { it in 1..n.toInt() })
+        }
+        // Should the pool's growth line a week up with last week's page anyway, it moves on one.
+        val p = DropsRepository.pageFor(start + 3, 126)
+        assertEquals(p % 126 + 1, DropsRepository.pageFor(start + 3, 126, previous = p))
+        // 30 October keeps the page 1.3.0 gives it: the same ten for everyone that Friday.
+        val first = DropsRepository.STABLE_FROM
+        assertEquals(1 + (DropsRepository.seed(first) % 126).toInt(), DropsRepository.pageFor(first, 126))
+    }
+
+    @Test
     fun `the drops tab marks a week until its drop is opened`() = runBlocking {
         val drops = repo(http())
         assertTrue(drops.newDrop.value)
