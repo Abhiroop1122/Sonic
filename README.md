@@ -227,7 +227,8 @@ release/     release notes, checksums, verification reports
 
 | Version | | |
 | :--- | :--- | :--- |
-| **[1.4.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.0)** | **Current** | Sonic opens a port on your router, uploads through the relay, shelves that say why, Drops new every week. |
+| **[1.4.1](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.1)** | **Current** | Settings › Connection: whether others can reach you, in its own row. |
+| [1.4.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.0) | Release | Sonic opens a port on your router, uploads through the relay, shelves that say why, Drops new every week. |
 | [1.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.3.0) | Release | Dig hears the whole network, friends' shelves, sharing that works, what's new. |
 | [1.2.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.2.0) | Release | The neon deck, vinyl only, the Bluetooth codec, covers that stay. |
 | [1.1.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.1.0) | Release | The track wheel picker, update checks with stable and development builds, a clearer signal chain. |

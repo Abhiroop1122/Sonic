@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.4.1 (2026-10-26)
+
+Whether others can reach you, where you'd look for it.
+
+- **Settings › Connection.** A row of its own in Settings, with the state in a few words: "reachable · port N", "not reachable · port N", "mobile data · not reachable", "blocked by your provider". Its page shows whether others can reach you and, when your router won't open the port, the port and this phone's address to forward by hand; why it matters; and what mobile data means for it. Signed out or offline, it says how to check instead of showing nothing.
+- Settings › Soulseek's last section is now "in the background": just the stay-online switch.
+
+---
+
 ## 1.4.0 (2026-10-26)
 
 Phones can reach each other, and when they can't, Sonic says why.

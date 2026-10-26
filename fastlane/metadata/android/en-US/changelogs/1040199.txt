@@ -1,0 +1,1 @@
+Settings has a Connection row: whether others can reach you, in a few words. Its page shows the port and this phone's address to forward by hand when your router won't open it, why it matters, and what mobile data means for it.
