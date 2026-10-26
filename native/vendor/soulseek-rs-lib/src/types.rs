@@ -616,3 +616,13 @@ impl SessionWatch {
 /// peers at the door.
 pub static PEERS_ADMITTED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 pub static PEERS_REFUSED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Why a peer we asked for could not be reached, for a host to tell its user.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PeerReach {
+    /// The server says they are not logged in (it gave no address).
+    Offline,
+    /// Online, but neither side could open a connection: we couldn't dial
+    /// them, and they couldn't come to us through the server's relay.
+    Unreachable,
+}

@@ -77,6 +77,8 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 pub enum ServerMessage {
     ProcessRead,
     LoginStatus(bool),
+    /// Our own public address, from the login reply.
+    OwnAddress(String),
     /// The server is closing this connection: the same username logged in
     /// elsewhere.
     Relogged,

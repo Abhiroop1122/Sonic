@@ -301,6 +301,13 @@ impl Client {
             .and_then(|mut ctx| ctx.take_browse_result(username))
     }
 
+    /// Why the last attempt to reach `username` failed, if it did. A browse
+    /// that hasn't arrived can stop waiting once this says something.
+    #[must_use]
+    pub fn peer_reach(&self, username: &str) -> Option<crate::types::PeerReach> {
+        self.context.read_safe().ok().and_then(|ctx| ctx.peer_reach(username))
+    }
+
     /// Remove and return all private messages received since the last call.
     #[must_use]
     pub fn take_private_messages(&self) -> Vec<UserMessage> {

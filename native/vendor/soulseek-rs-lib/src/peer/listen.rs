@@ -260,6 +260,13 @@ fn handle_pierce_firewall(
     message.set_pointer(5); // skip length prefix (4) + int8 code (1)
     let token = message.read_int32();
 
+    // An upload we couldn't dial: the downloader came through the relay.
+    let relayed = context.client_context.write_safe().ok().and_then(|mut ctx| ctx.take_upload_pierce(token));
+    if let Some(upload) = relayed {
+        crate::client::Client::serve_pierced(&context.client_context, upload, stream);
+        return;
+    }
+
     let username = match context.client_context.write_safe() {
         Ok(mut ctx) => ctx.take_pending_connect(token),
         Err(e) => {

@@ -70,7 +70,7 @@ struct Runtime {
     events: Mutex<VecDeque<Value>>, generation: AtomicU64, closed: AtomicBool,
     searches: Mutex<HashMap<String, Arc<AtomicBool>>>, transfers: Mutex<HashMap<String, Transfer>>,
     contacts: Mutex<HashMap<String, Option<bool>>>, open: OpenFile,
-    share_entries: Mutex<Vec<HostSharedFile>>, seen_loss: AtomicBool,
+    share_entries: Mutex<Vec<HostSharedFile>>, seen_loss: AtomicBool, seen_address: Mutex<Option<String>>,
     uploads: Mutex<HashMap<String, String>>,
     /// Transfers dropped after their final state was reported, newest last. A pause, resume
     /// or cancel that races the report still finds nothing to do instead of an unknown id.
@@ -85,7 +85,7 @@ impl Runtime {
             events: Mutex::new(VecDeque::new()), generation: AtomicU64::new(0), closed: AtomicBool::new(false),
             searches: Mutex::new(HashMap::new()), transfers: Mutex::new(HashMap::new()),
             contacts: Mutex::new(HashMap::new()), open, share_entries: Mutex::new(Vec::new()),
-            seen_loss: AtomicBool::new(false), uploads: Mutex::new(HashMap::new()),
+            seen_loss: AtomicBool::new(false), seen_address: Mutex::new(None), uploads: Mutex::new(HashMap::new()),
             retired: Mutex::new(VecDeque::new()) })
     }
     fn push(&self, event: Value) {
@@ -149,10 +149,15 @@ impl Runtime {
                 self.stop();
                 let generation = self.generation.load(Ordering::SeqCst);
                 self.seen_loss.store(false, Ordering::Relaxed);
+                lock(&self.seen_address).take();
+                // A port kept from one session to the next, so the router's forward (PortMapper)
+                // stays valid; if something else holds it now, any free one.
+                let wanted = value["listenPort"].as_u64().filter(|p| (1024..=65535).contains(p)).unwrap_or(0) as u16;
+                let listen_port = if wanted != 0 && std::net::TcpListener::bind(("0.0.0.0", wanted)).is_ok() { wanted } else { 0 };
                 let settings = ClientSettings { username: username.clone(), password,
                     server_address: PeerAddress::new(value["host"].as_str().unwrap_or("server.slsknet.org").to_string(),
                         value["port"].as_u64().filter(|p| *p > 0 && *p <= 65535).unwrap_or(2416) as u16),
-                    enable_listen: true, listen_port: 0, accept_children: false,
+                    enable_listen: true, listen_port, accept_children: false,
                     shared_directories: Vec::new(), version: ClientVersion { major: 177, minor: 1 } };
                 let mut client = Client::with_settings(settings);
                 *lock(&self.connecting) = Some(client.cancel_handle());
@@ -171,8 +176,9 @@ impl Runtime {
                             // turned all but the first few dozen away.
                             client.set_max_peers(256);
                             client.set_peer_admission_grace(Duration::from_secs(2));
+                            let port = client.listen_port();
                             *lock(&runtime.client) = Some(Arc::new(client));
-                            runtime.push(json!({"type":"session","state":"connected","username":username}));
+                            runtime.push(json!({"type":"session","state":"connected","username":username,"listenPort":port}));
                         }
                         other => {
                             let reason_code = if matches!(&other, Ok(false) | Err(soulseek_rs::error::SoulseekRs::AuthenticationFailed)) { "AUTH_REJECTED" } else { "NETWORK_LOST" };
@@ -278,17 +284,27 @@ impl Runtime {
                         let folders = if directory.is_empty() { client.take_browse_result(&username) }
                             else { client.take_folder_contents(&username, &wire_directory) };
                         if let Some(folders) = folders {
-                            let mut files = Vec::new();
+                            let mut files = Vec::new(); let mut total = 0usize;
                             for folder in folders { for file in folder.files {
+                                total += 1;
                                 let path = format!("{}\\{}",folder.name.trim_end_matches('\\'),file.name);
                                 if flac_path(&path) { files.push(file_json(&path,file.size,&file.attributes.into_iter().collect())); }
                             }}
-                            runtime.push(json!({"type":"browse_result","id":id,"username":username,"directory":directory,"files":files})); return;
+                            // "total" counts every file they share, so the app can tell "shares nothing" from "no FLAC".
+                            runtime.push(json!({"type":"browse_result","id":id,"username":username,"directory":directory,"files":files,"total":total})); return;
+                        }
+                        // The server or the relay already said why they can't be reached: no need to wait out the 30 s.
+                        if let Some(reach) = client.peer_reach(&username) {
+                            let (code, text) = match reach {
+                                soulseek_rs::PeerReach::Offline => ("OFFLINE", "They are offline"),
+                                soulseek_rs::PeerReach::Unreachable => ("UNREACHABLE", "Neither of you could connect to the other"),
+                            };
+                            runtime.push(json!({"type":"error","operation":"browse","id":id,"error":text,"reasonCode":code})); return;
                         }
                         std::thread::sleep(Duration::from_millis(100));
                     }
                     if runtime.generation.load(Ordering::SeqCst) == generation {
-                        runtime.push(json!({"type":"error","operation":"browse","id":id,"error":"The peer did not return a file listing"}));
+                        runtime.push(json!({"type":"error","operation":"browse","id":id,"error":"The peer did not return a file listing","reasonCode":"NO_ANSWER"}));
                     }
                 });
             }
@@ -383,6 +399,12 @@ impl Runtime {
             if !self.seen_loss.swap(true, Ordering::Relaxed) {
                 events.push(json!({"type":"session","state":"disconnected","reasonCode":match loss {SessionLoss::Displaced=>"DISPLACED",_=>"NETWORK_LOST"},"reason":match loss {SessionLoss::Displaced=>"This Soulseek ID signed in on another device",_=>"The Soulseek connection was lost"}}));
             }
+        }
+        // Our public address, once the server has told us: the app compares it with the
+        // router's to tell when the internet provider puts another router in front.
+        if let Some(ip) = client.public_address() {
+            let mut seen = lock(&self.seen_address);
+            if seen.as_deref() != Some(ip.as_str()) { events.push(json!({"type":"address","publicIp":ip})); *seen = Some(ip); }
         }
         for message in client.take_private_messages() {
             events.push(json!({"type":"message","id":message.id(),"username":message.username(),"text":message.message(),"timestamp":message.timestamp(),"replayed":!message.is_new()}));

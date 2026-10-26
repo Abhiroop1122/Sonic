@@ -51,10 +51,12 @@ impl ClientContext {
             uploads: HashMap::new(),
             active_uploads: HashMap::new(),
             pending_serves: HashMap::new(),
+            pending_upload_pierces: HashMap::new(),
             browse_results: HashMap::new(),
             folder_contents: HashMap::new(),
             peer_infos: HashMap::new(),
             pending_browses: HashMap::new(),
+            peer_reach: HashMap::new(),
             room_list: Vec::new(),
             room_events: Vec::new(),
             room_members: HashMap::new(),
@@ -74,6 +76,7 @@ impl ClientContext {
             wishlist_interval: None,
             privileged_users: HashSet::new(),
             own_privileges: None,
+            own_address: None,
             excluded_search_phrases: Vec::new(),
             upload_queue: Vec::new(),
             upload_seq: 0,
@@ -684,6 +687,20 @@ impl ClientContext {
         self.pending_browses.retain(|_, deadline| *deadline > now);
         self.pending_browses
             .insert(username.to_string(), now + BROWSE_PROTECT_WINDOW);
+        self.peer_reach.remove(username);
+    }
+
+    /// Note why `username` couldn't be reached.
+    pub(crate) fn set_peer_reach(&mut self, username: &str, reach: crate::types::PeerReach) {
+        // Offline is the stronger answer: a later relay failure for an offline
+        // user says nothing new.
+        if self.peer_reach.get(username) != Some(&crate::types::PeerReach::Offline) {
+            self.peer_reach.insert(username.to_string(), reach);
+        }
+    }
+
+    pub(crate) fn peer_reach(&self, username: &str) -> Option<crate::types::PeerReach> {
+        self.peer_reach.get(username).copied()
     }
 
     /// Remove and return the shared-file listing browsed from `username`.
@@ -699,6 +716,11 @@ impl ClientContext {
     pub fn add_pending_connect(&mut self, token: u32, username: String) {
         self.pending_connect_tokens
             .insert(token, (username, Instant::now() + BROKER_CONNECT_TIMEOUT));
+    }
+
+    /// The upload waiting for its downloader to come through the relay quoting `token`.
+    pub(crate) fn take_upload_pierce(&mut self, token: u32) -> Option<super::PiercedUpload> {
+        self.pending_upload_pierces.remove(&token)
     }
 
     /// Resolve and consume the peer expected for a brokered connection `token`.

@@ -164,8 +164,7 @@ impl Client {
                         client_context,
                         &own_username,
                         token,
-                        host,
-                        port,
+                        super::super::ServeTarget::Dial { host, port },
                     );
                 } else {
                     if let Ok(mut ctx) = client_context.write_safe() {

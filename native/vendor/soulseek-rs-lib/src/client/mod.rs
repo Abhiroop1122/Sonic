@@ -114,6 +114,22 @@ struct UploadJob {
     offered: Option<Instant>,
 }
 
+/// An upload waiting for its downloader to come to us through the server's
+/// relay: we couldn't dial them, so we asked the server to have them connect to
+/// our port quoting a token. It is served on that connection when it arrives.
+pub(crate) struct PiercedUpload {
+    token: u32,
+    real_path: std::path::PathBuf,
+    deadline: Instant,
+}
+
+/// How an upload reaches its downloader: dialled directly, or through the
+/// server's relay when they can't be dialled (port 0, or the dial failed).
+pub(crate) enum ServeTarget {
+    Dial { host: String, port: u32 },
+    Relay,
+}
+
 /// Live bookkeeping for an upload being served (or recently finished).
 struct ActiveUpload {
     username: String,
@@ -398,6 +414,8 @@ pub enum ClientOperation {
     /// A session just started: anything the server keeps only per-session —
     /// our interests — has to be sent again.
     SessionEstablished,
+    /// Our public address as the server saw it at login.
+    OwnAddress(String),
     /// A peer dialled us with a `D` connection, asking to hang from us in the
     /// distributed search network.
     ChildConnected {
@@ -507,6 +525,9 @@ pub struct ClientContext {
     active_uploads: HashMap<u32, ActiveUpload>,
     /// Upload tokens waiting for the downloader's address to be resolved.
     pending_serves: HashMap<String, Vec<u32>>,
+    /// Uploads waiting for the downloader to connect back through the relay,
+    /// by the token we asked the server to pass on.
+    pending_upload_pierces: HashMap<u32, PiercedUpload>,
     /// Shared-file listings received from peers we browsed.
     browse_results: HashMap<String, Vec<SharedDirectory>>,
     /// One-folder listings received from peers, keyed by peer and folder.
@@ -514,6 +535,8 @@ pub struct ClientContext {
     /// What peers said about themselves (peer code 16), keyed by peer.
     peer_infos: HashMap<String, crate::message::peer::PeerInfo>,
     pending_browses: HashMap<String, Instant>,
+    /// Peers we last failed to reach, and why; cleared by the next browse.
+    peer_reach: HashMap<String, crate::types::PeerReach>,
     /// Latest snapshot of the public chat-room list (from `RoomList`, code 64).
     room_list: Vec<RoomInfo>,
     /// Chat-room events awaiting consumption by the client/UI.
@@ -564,6 +587,8 @@ pub struct ClientContext {
     privileged_users: HashSet<String>,
     /// Seconds of our own privileges left (code 92), once we have asked.
     own_privileges: Option<u32>,
+    /// Our public address as the server saw it at login.
+    own_address: Option<String>,
     /// Phrases the server excludes from the search network (code 160). Files
     /// whose path carries one are left out of the replies we send.
     excluded_search_phrases: Vec<String>,

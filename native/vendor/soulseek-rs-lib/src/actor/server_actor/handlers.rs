@@ -30,6 +30,9 @@ impl ServerActor {
             ServerMessage::LoginStatus(message) => {
                 self.handle_login_status(message);
             }
+            ServerMessage::OwnAddress(ip) => {
+                self.forward_to_client(ClientOperation::OwnAddress(ip));
+            }
             ServerMessage::Relogged => self.handle_relogged(),
             ServerMessage::PierceFirewall(token) => {
                 self.send_message(

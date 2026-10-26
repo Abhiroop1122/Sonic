@@ -16,14 +16,13 @@ use crate::trace;
 /// We announce ourselves with a `PeerInit(F)` immediately followed by the raw
 /// transfer token (so it lands in the downloader's read buffer, where the
 /// download is matched by token), then the downloader sends an 8-byte
-/// START_DOWNLOAD offset before we stream the file.
-///
-/// `bytes_sent` is updated as the transfer progresses, and setting `cancel`
-/// aborts the stream with an [`io::ErrorKind::Interrupted`] error. Returns the
-/// bytes streamed by this call, which a resumed transfer's prefix is not.
+/// START_DOWNLOAD offset before we stream the file. The client dials and
+/// serves in two steps (see [`dial_upload`], [`serve_stream`]) so a failed
+/// dial can fall back to the server's relay; this is the one-step form.
 ///
 /// # Errors
 /// Returns any I/O error opening the file or talking to the peer.
+#[cfg(test)]
 pub fn serve_file(
     host: &str,
     port: u32,
@@ -33,31 +32,38 @@ pub fn serve_file(
     bytes_sent: &AtomicU64,
     cancel: &AtomicBool,
 ) -> io::Result<u64> {
-    serve_open_file(host, port, own_username, token, path, File::open(path)?, bytes_sent, cancel)
+    let file = File::open(path)?;
+    let stream = dial_upload(host, port)?;
+    serve_stream(stream, Some(own_username), token, path, file, bytes_sent, cancel)
 }
 
-/// Runout: serve an owned, seekable descriptor opened by Android's document
-/// provider. The host retains control over which manifest keys can be opened.
-#[allow(clippy::too_many_arguments)]
-pub fn serve_open_file(
-    host: &str,
-    port: u32,
-    own_username: &str,
-    token: u32,
-    path: &Path,
-    mut file: File,
-    bytes_sent: &AtomicU64,
-    cancel: &AtomicBool,
-) -> io::Result<u64> {
-
+/// Dial the downloader for an upload, with the deadlines a transfer socket needs.
+pub fn dial_upload(host: &str, port: u32) -> io::Result<TcpStream> {
     let socket = format!("{host}:{port}")
         .to_socket_addrs()?
         .next()
         .ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "no address")
         })?;
-    let mut stream =
+    let stream =
         TcpStream::connect_timeout(&socket, Duration::from_secs(20))?;
+    Ok(stream)
+}
+
+/// Stream `file` over an F connection. `own_username` is set when we dialled
+/// (we open with PeerInit(F)); `None` when the downloader came to us through the
+/// server's relay and already opened with PierceFirewall, so only the transfer
+/// token goes first, as Nicotine+ does.
+#[allow(clippy::too_many_arguments)]
+pub fn serve_stream(
+    mut stream: TcpStream,
+    own_username: Option<&str>,
+    token: u32,
+    path: &Path,
+    mut file: File,
+    bytes_sent: &AtomicU64,
+    cancel: &AtomicBool,
+) -> io::Result<u64> {
     // A downloader that connects and then goes silent must cost seconds, not
     // the rest of the session: without deadlines a wedged `read_exact` (or a
     // zero-window `write_all`) holds this thread, the socket, the open file,
@@ -70,14 +76,14 @@ pub fn serve_open_file(
     stream.set_read_timeout(Some(Duration::from_secs(30)))?;
     stream.set_write_timeout(Some(Duration::from_secs(30)))?;
     stream.set_nodelay(true).ok();
+    let (host, port) = stream.peer_addr().map(|a| (a.ip().to_string(), a.port() as u32)).unwrap_or_default();
 
-    // PeerInit(F) + the 4-byte token in a single write so they coalesce.
-    let mut init = MessageFactory::build_peer_init_message(
-        own_username,
-        ConnectionType::F,
-        token,
-    )
-    .get_buffer();
+    // PeerInit(F) + the 4-byte token in a single write so they coalesce; after
+    // a PierceFirewall, the token alone.
+    let mut init = match own_username {
+        Some(own) => MessageFactory::build_peer_init_message(own, ConnectionType::F, token).get_buffer(),
+        None => Vec::new(),
+    };
     init.extend_from_slice(&token.to_le_bytes());
     stream.write_all(&init)?;
     stream.flush()?;
@@ -125,7 +131,7 @@ pub fn serve_open_file(
 
 #[cfg(test)]
 mod tests {
-    use super::serve_file;
+    use super::{serve_file, serve_stream};
     use std::io::{Read, Write};
     use std::net::{TcpListener, TcpStream};
     use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -327,6 +333,45 @@ mod tests {
 
         let err = uploader.join().unwrap().unwrap_err();
         assert_eq!(err.kind(), std::io::ErrorKind::Interrupted);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_relayed_upload_sends_only_the_token_on_the_pierced_connection() {
+        let content = b"relayed bytes".to_vec();
+        let path = scratch_file("relay", &content);
+        let dir = path.parent().unwrap().to_path_buf();
+
+        // The downloader came to us (PierceFirewall already read by the
+        // listener), so we serve on its socket without a PeerInit.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let downloader = std::thread::spawn(move || {
+            let mut stream = TcpStream::connect(addr).unwrap();
+            let mut token = [0u8; 4];
+            stream.read_exact(&mut token).unwrap();
+            stream.write_all(&0u64.to_le_bytes()).unwrap();
+            let mut received = Vec::new();
+            stream.read_to_end(&mut received).unwrap();
+            (u32::from_le_bytes(token), received)
+        });
+        let (ours, _) = listener.accept().unwrap();
+        let sent = AtomicU64::new(0);
+        let streamed = serve_stream(
+            ours,
+            None,
+            4242,
+            &path,
+            std::fs::File::open(&path).unwrap(),
+            &sent,
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+        let (token, received) = downloader.join().unwrap();
+        assert_eq!(token, 4242);
+        assert_eq!(received, content);
+        assert_eq!(streamed, content.len() as u64);
         let _ = std::fs::remove_dir_all(dir);
     }
 }

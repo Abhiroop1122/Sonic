@@ -1,8 +1,14 @@
 use super::{
     ActiveUpload, Arc, Client, ClientContext, DownloadStatus, PeerMessage,
-    RwLock, RwLockExt, ServerMessage, collect_failed_tokens, error,
+    PiercedUpload, RwLock, RwLockExt, ServeTarget, ServerMessage, collect_failed_tokens, error,
     next_upload_token, thread,
 };
+use crate::debug;
+use std::time::{Duration, Instant};
+
+/// How long a relayed upload waits for its downloader to connect: the server's
+/// own brokering window, and some.
+const UPLOAD_RELAY_TIMEOUT: Duration = Duration::from_secs(30);
 use crate::message::server::MessageFactory;
 use crate::types::UploadStatus;
 use std::sync::atomic::{AtomicBool, AtomicU64};
@@ -39,6 +45,16 @@ impl Client {
             .read_safe()
             .ok()
             .and_then(|ctx| ctx.own_privileges)
+    }
+
+    /// Our public address as the Soulseek server saw it at login, or `None`
+    /// until it has said.
+    #[must_use]
+    pub fn public_address(&self) -> Option<String> {
+        self.context
+            .read_safe()
+            .ok()
+            .and_then(|ctx| ctx.own_address.clone())
     }
 
     /// Queued-upload states recorded since the last call, for a caller that
@@ -104,14 +120,13 @@ impl Client {
         }
     }
 
-    /// Consume the upload job for `token` and stream the file to `host:port`
-    /// on a background thread.
+    /// Consume the upload job for `token` and serve it: dial the downloader, or
+    /// when they can't be dialled, ask the server's relay to bring them to us.
     pub(crate) fn spawn_serve(
         client_context: &Arc<RwLock<ClientContext>>,
         own_username: &str,
         token: u32,
-        host: String,
-        port: u32,
+        target: ServeTarget,
     ) {
         let Ok(mut ctx) = client_context.write_safe() else {
             return;
@@ -127,69 +142,155 @@ impl Client {
                 username: job.downloader.clone(),
                 filename: job.virtual_path.clone(),
                 size: job.size,
-                bytes_sent: bytes_sent.clone(),
-                cancel: cancel.clone(),
+                bytes_sent,
+                cancel,
                 status: UploadStatus::InProgress,
                 started: std::time::Instant::now(),
             },
         );
         drop(ctx);
-        let own = own_username.to_string();
+        let username = job.downloader;
         let real_path = job.real_path;
-        let opener = client_context.read_safe().ok()
-            .and_then(|ctx| ctx.host_file_opener.clone());
+        match target {
+            ServeTarget::Relay => Self::request_upload_relay(client_context, token, &username, real_path),
+            ServeTarget::Dial { host, port } => {
+                let own = own_username.to_string();
+                let context = client_context.clone();
+                thread::spawn(move || match crate::peer::upload_peer::dial_upload(&host, port) {
+                    Ok(stream) => Self::serve_on(&context, token, &real_path, stream, Some(&own)),
+                    // They can't be dialled (firewalled, like most phones and many homes):
+                    // ask the server to have them come to us, which works now that our
+                    // port is open (PortMapper on the host).
+                    Err(e) => {
+                        debug!("[client] dial {}:{} for upload {}: {}; asking the relay", host, port, token, e);
+                        Self::request_upload_relay(&context, token, &username, real_path);
+                    }
+                });
+            }
+        }
+    }
+
+    /// Ask the server to have `username` connect to us for upload `token`,
+    /// quoting a fresh token we'll know them by.
+    pub(crate) fn request_upload_relay(
+        client_context: &Arc<RwLock<ClientContext>>,
+        token: u32,
+        username: &str,
+        real_path: std::path::PathBuf,
+    ) {
+        let pierce = super::next_connect_token();
+        let sender = match client_context.write_safe() {
+            Ok(mut ctx) => {
+                ctx.pending_upload_pierces.insert(pierce, PiercedUpload { token, real_path, deadline: Instant::now() + UPLOAD_RELAY_TIMEOUT });
+                ctx.server_sender.clone()
+            }
+            Err(_) => None,
+        };
+        if let Some(sender) = sender {
+            let msg = MessageFactory::build_connect_to_peer(pierce, username, crate::peer::ConnectionType::F);
+            let _ = sender.send(ServerMessage::SendMessage(msg));
+        }
+    }
+
+    /// The downloader came to us through the relay, quoting `upload`'s token in
+    /// a PierceFirewall: serve the file on that connection.
+    pub(crate) fn serve_pierced(
+        client_context: &Arc<RwLock<ClientContext>>,
+        upload: PiercedUpload,
+        stream: std::net::TcpStream,
+    ) {
         let context = client_context.clone();
-        thread::spawn(move || {
-            let source = match opener {
-                Some(open) => open(&real_path),
-                None => std::fs::File::open(&real_path),
-            };
-            let result = source.and_then(|file| crate::peer::upload_peer::serve_open_file(
-                &host,
-                port,
-                &own,
-                token,
-                &real_path,
-                file,
-                &bytes_sent,
-                &cancel,
-            ));
-            let streamed = result.as_ref().ok().copied();
-            let status = match &result {
-                Ok(_) => UploadStatus::Completed,
-                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {
-                    UploadStatus::Cancelled
+        thread::spawn(move || Self::serve_on(&context, upload.token, &upload.real_path, stream, None));
+    }
+
+    /// Relayed uploads whose downloader never came: neither side could reach
+    /// the other. The slot is freed for whoever is next.
+    pub(crate) fn expire_upload_relays(client_context: &Arc<RwLock<ClientContext>>) {
+        let now = Instant::now();
+        let expired = match client_context.write_safe() {
+            Ok(mut ctx) => {
+                let gone: Vec<u32> = ctx.pending_upload_pierces.iter().filter(|(_, p)| p.deadline <= now).map(|(k, _)| *k).collect();
+                let mut tokens = Vec::new();
+                for pierce in gone {
+                    if let Some(p) = ctx.pending_upload_pierces.remove(&pierce) {
+                        if let Some(upload) = ctx.active_uploads.get_mut(&p.token) {
+                            upload.status = UploadStatus::Failed("couldn't reach them, and they couldn't reach us".to_string());
+                        }
+                        tokens.push(p.token);
+                    }
                 }
-                Err(e) => {
-                    error!("[client] serve {}: {}", real_path.display(), e);
-                    UploadStatus::Failed(e.to_string())
-                }
-            };
-            let mut report = None;
-            if let Ok(mut ctx) = context.write_safe()
-                && let Some(upload) = ctx.active_uploads.get_mut(&token)
+                tokens
+            }
+            Err(_) => return,
+        };
+        if !expired.is_empty() {
+            Self::pump_upload_queue(client_context);
+        }
+    }
+
+    /// Stream upload `token`'s file over `stream`; `own` is set when we dialled.
+    fn serve_on(
+        context: &Arc<RwLock<ClientContext>>,
+        token: u32,
+        real_path: &std::path::Path,
+        stream: std::net::TcpStream,
+        own: Option<&str>,
+    ) {
+        let (bytes_sent, cancel, opener) = match context.read_safe() {
+            Ok(ctx) => match ctx.active_uploads.get(&token) {
+                Some(u) => (u.bytes_sent.clone(), u.cancel.clone(), ctx.host_file_opener.clone()),
+                None => return,
+            },
+            Err(_) => return,
+        };
+        let source = match opener {
+            Some(open) => open(real_path),
+            None => std::fs::File::open(real_path),
+        };
+        let result = source.and_then(|file| crate::peer::upload_peer::serve_stream(
+            stream,
+            own,
+            token,
+            real_path,
+            file,
+            &bytes_sent,
+            &cancel,
+        ));
+        let streamed = result.as_ref().ok().copied();
+        let status = match &result {
+            Ok(_) => UploadStatus::Completed,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {
+                UploadStatus::Cancelled
+            }
+            Err(e) => {
+                error!("[client] serve {}: {}", real_path.display(), e);
+                UploadStatus::Failed(e.to_string())
+            }
+        };
+        let mut report = None;
+        if let Ok(mut ctx) = context.write_safe()
+            && let Some(upload) = ctx.active_uploads.get_mut(&token)
+        {
+            let secs = upload.started.elapsed().as_secs_f64();
+            upload.status = status;
+            if let Some(bytes) = streamed
+                && secs > 0.0
             {
-                let secs = upload.started.elapsed().as_secs_f64();
-                upload.status = status;
-                if let Some(bytes) = streamed
-                    && secs > 0.0
-                {
-                    let speed = (bytes as f64 / secs) as u32;
-                    ctx.last_upload_speed = speed;
-                    report = ctx.server_sender.clone().map(|s| (s, speed));
-                }
+                let speed = (bytes as f64 / secs) as u32;
+                ctx.last_upload_speed = speed;
+                report = ctx.server_sender.clone().map(|s| (s, speed));
             }
-            // The server folds each finished upload's rate into the average
-            // speed it shows other users for us.
-            if let Some((server, speed)) = report {
-                let _ = server.send(ServerMessage::SendMessage(
-                    MessageFactory::build_send_upload_speed(speed),
-                ));
-            }
-            // The slot this transfer held is free now, so whoever is next in
-            // line gets it without waiting for another request to arrive.
-            Self::pump_upload_queue(&context);
-        });
+        }
+        // The server folds each finished upload's rate into the average
+        // speed it shows other users for us.
+        if let Some((server, speed)) = report {
+            let _ = server.send(ServerMessage::SendMessage(
+                MessageFactory::build_send_upload_speed(speed),
+            ));
+        }
+        // The slot this transfer held is free now, so whoever is next in
+        // line gets it without waiting for another request to arrive.
+        Self::pump_upload_queue(&context);
     }
 
     pub(crate) fn process_failed_uploads(

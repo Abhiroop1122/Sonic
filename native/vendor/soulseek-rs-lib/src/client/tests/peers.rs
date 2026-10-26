@@ -171,3 +171,80 @@ fn the_server_is_told_our_child_capacity_only_when_it_changes() {
     );
     assert_eq!(ctx.accept_children_change(), None, "unchanged, so silent");
 }
+
+// A relayed upload whose downloader never connects back frees its slot: the
+// pierce is dropped and the upload reads as failed, not in progress forever.
+#[test]
+fn a_relayed_upload_nobody_answers_expires_as_failed() {
+    let client = Client::new("test-user", "test-password");
+    {
+        let mut ctx = client.context.write().unwrap();
+        ctx.active_uploads.insert(
+            9,
+            ActiveUpload {
+                username: "amy".to_string(),
+                filename: "@@share\\f.flac".to_string(),
+                size: 4096,
+                bytes_sent: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+                cancel: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+                status: UploadStatus::InProgress,
+                started: Instant::now(),
+            },
+        );
+        ctx.pending_upload_pierces.insert(
+            77,
+            PiercedUpload {
+                token: 9,
+                real_path: std::path::PathBuf::from("/tmp/f.flac"),
+                deadline: Instant::now() + Duration::from_secs(30),
+            },
+        );
+    }
+
+    // Still inside the window: nothing changes.
+    Client::expire_upload_relays(&client.context);
+    assert!(client.context.read().unwrap().pending_upload_pierces.contains_key(&77));
+
+    client.context.write().unwrap().pending_upload_pierces.get_mut(&77).unwrap().deadline =
+        Instant::now().checked_sub(Duration::from_secs(1)).unwrap();
+    Client::expire_upload_relays(&client.context);
+    let ctx = client.context.read().unwrap();
+    assert!(ctx.pending_upload_pierces.is_empty());
+    assert!(matches!(ctx.active_uploads[&9].status, UploadStatus::Failed(_)));
+    // The pierce is consumed once: a late PierceFirewall finds nothing.
+    drop(ctx);
+    assert!(client.context.write().unwrap().take_upload_pierce(77).is_none());
+}
+
+// A browse of someone the server gives no address for ends as "offline" at
+// once, and the next browse starts with a clean slate.
+#[test]
+fn an_addressless_peer_reads_as_offline_until_the_next_browse() {
+    let client = Client::new("test-user", "test-password");
+    let (ops, ops_rx) = mpsc::channel();
+    Client::listen_to_client_operations(ops_rx, client.context.clone(), "me".to_string());
+
+    ops.send(ClientOperation::GetPeerAddressResponse {
+        username: "amy".to_string(),
+        host: "0.0.0.0".to_string(),
+        port: 0,
+        obfuscation_type: 0,
+        obfuscated_port: 0,
+    })
+    .unwrap();
+    ops.send(ClientOperation::OwnPrivileges(7)).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while client.own_privilege_seconds() != Some(7) {
+        assert!(Instant::now() < deadline, "ops loop never caught up");
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(client.peer_reach("amy"), Some(crate::types::PeerReach::Offline));
+    // A relay failure after that says nothing new.
+    client.context.write().unwrap().set_peer_reach("amy", crate::types::PeerReach::Unreachable);
+    assert_eq!(client.peer_reach("amy"), Some(crate::types::PeerReach::Offline));
+
+    client.context.write().unwrap().mark_browse_pending("amy");
+    assert_eq!(client.peer_reach("amy"), None);
+    client.context.write().unwrap().set_peer_reach("amy", crate::types::PeerReach::Unreachable);
+    assert_eq!(client.peer_reach("amy"), Some(crate::types::PeerReach::Unreachable));
+}

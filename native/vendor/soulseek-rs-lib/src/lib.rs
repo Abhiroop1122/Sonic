@@ -22,7 +22,7 @@ pub mod utils;
 pub mod prelude {
     pub use crate::actor::server_actor::PeerAddress;
     pub use crate::types::{
-        ClientVersion, DownloadStatus, File, Recommendation, RoomEvent,
+        ClientVersion, DownloadStatus, File, PeerReach, Recommendation, RoomEvent,
         RoomInfo, RoomTicker, Search, SearchResult, SimilarUser, Transfer,
         UploadInfo, UploadStatus, UserInfo, UserInterests, UserPresence,
         UserStats, UserStatus,
@@ -37,7 +37,7 @@ pub use error::{Result, SoulseekRs};
 pub use message::peer::{SharedDirectory, SharedFileEntry};
 pub use peer::{ConnectionType, ParseConnectionTypeError};
 pub use types::{
-    ClientVersion, DownloadStatus, File, Recommendation, RoomEvent, RoomInfo,
+    ClientVersion, DownloadStatus, File, PeerReach, Recommendation, RoomEvent, RoomInfo,
     RoomTicker, Search, SearchResult, SessionLoss, SimilarUser, Transfer,
     UploadInfo, UploadStatus, UserInfo, UserInterests, UserPresence, UserStats,
     UserStatus,

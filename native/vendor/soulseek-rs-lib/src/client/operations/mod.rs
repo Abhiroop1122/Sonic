@@ -41,6 +41,7 @@ impl Client {
                     last_sweep = Instant::now();
                     Self::sweep_expired_connects(&client_context);
                     Self::sweep_stale_offers(&client_context);
+                    Self::expire_upload_relays(&client_context);
                     if let Ok(mut ctx) = client_context.write_safe() {
                         ctx.expire_pending_peer_messages(Instant::now());
                         if let Some(branch) =
@@ -151,11 +152,26 @@ impl Client {
                         // its failure is exactly what makes an
                         // unreachable peer fall back to the
                         // server-brokered path.
+                        // No address at all: they aren't logged in.
+                        if host == "0.0.0.0"
+                            && let Ok(mut ctx) = client_context.write_safe()
+                        {
+                            ctx.set_peer_reach(&username, crate::types::PeerReach::Offline);
+                        }
                         let waiting_serves = if port == 0 {
                             warn!(
                                 "[client] server reports no listening port for {}",
                                 username
                             );
+                            // They can't be dialled: uploads waiting on them go
+                            // through the server's relay, so they connect to us.
+                            let relayed = match client_context.write_safe() {
+                                Ok(mut ctx) => ctx.pending_serves.remove(&username).unwrap_or_default(),
+                                Err(_) => Vec::new(),
+                            };
+                            for token in relayed {
+                                Self::spawn_serve(&client_context, &own_username, token, super::ServeTarget::Relay);
+                            }
                             Vec::new()
                         } else {
                             match client_context.write_safe() {
@@ -177,8 +193,7 @@ impl Client {
                                 &client_context,
                                 &own_username,
                                 token,
-                                host.clone(),
-                                port,
+                                super::ServeTarget::Dial { host: host.clone(), port },
                             );
                         }
 
@@ -582,6 +597,11 @@ impl Client {
                         }
                         Self::announce_child_capacity(&client_context);
                     }
+                    ClientOperation::OwnAddress(ip) => {
+                        if let Ok(mut ctx) = client_context.write_safe() {
+                            ctx.own_address = Some(ip);
+                        }
+                    }
                     ClientOperation::SessionEstablished => {
                         // Interests live in the server only for the session
                         // that set them, so a new one starts by sending ours
@@ -640,6 +660,9 @@ impl Client {
                                 "[client] {} cannot connect back (token {})",
                                 username, token
                             );
+                            if let Ok(mut ctx) = client_context.write_safe() {
+                                ctx.set_peer_reach(&username, crate::types::PeerReach::Unreachable);
+                            }
                             Self::fail_queued_downloads(
                                 &client_context,
                                 &username,
@@ -789,6 +812,9 @@ impl Client {
             Err(_) => return,
         };
         for username in expired {
+            if let Ok(mut ctx) = client_context.write_safe() {
+                ctx.set_peer_reach(&username, crate::types::PeerReach::Unreachable);
+            }
             Self::fail_queued_downloads(client_context, &username);
         }
     }
