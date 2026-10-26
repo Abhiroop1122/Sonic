@@ -15,7 +15,7 @@ plugins {
  * after the release before it and before its own release:
  * major × 1,000,000 + minor × 10,000 + patch × 100 + (the dev number, or 99 for a release).
  */
-val sonicVersion = "1.3.0"
+val sonicVersion = "1.3.1"
 
 fun versionCodeOf(name: String): Int {
     val m = Regex("""^(\d+)\.(\d+)\.(\d+)(?:-dev\.(\d+))?$""").matchEntire(name)

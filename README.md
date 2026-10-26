@@ -227,7 +227,8 @@ release/     release notes, checksums, verification reports
 
 | Version | | |
 | :--- | :--- | :--- |
-| **[1.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.3.0)** | **Current** | Dig hears the whole network, friends' shelves, sharing that works, what's new. |
+| **[1.3.1](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.3.1)** | **Current** | All ten Friday Drops new every week. |
+| [1.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.3.0) | Release | Dig hears the whole network, friends' shelves, sharing that works, what's new. |
 | [1.2.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.2.0) | Release | The neon deck, vinyl only, the Bluetooth codec, covers that stay. |
 | [1.1.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.1.0) | Release | The track wheel picker, update checks with stable and development builds, a clearer signal chain. |
 | [1.0.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.0.0) | Release | Sonic. Themes, three decks, Storage, swaps by hand. |

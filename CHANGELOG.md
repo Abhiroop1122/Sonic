@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.3.1 (2026-10-26)
+
+All ten Friday Drops are new every week.
+
+- **Drops walk the pool.** From Friday 6 November each week steps a fixed stride through the archive's pages of Creative Commons FLAC albums, a stride that shares no factor with the page count. Two weeks in a row never read the same page, and every page comes round once (about two and a half years) before any comes back. Pages hold different albums, so the ten are all new each Friday, and still the same ten for everyone. Friday 30 October keeps the pick 1.3.0 gives it.
+
+---
+
 ## 1.3.0 (2026-10-26)
 
 Dig finds what's out there, friends' shelves open, and sharing works.
