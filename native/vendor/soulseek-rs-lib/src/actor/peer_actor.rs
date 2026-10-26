@@ -103,6 +103,10 @@ pub struct PeerActor {
     /// Transfer tokens for uploads we are serving to this peer. A TransferResponse
     /// for one of these is our upload being accepted, not a download offer.
     serving_tokens: std::collections::HashSet<u32>,
+    /// When a search-only connection closes ([SEARCH_LINGER]); cleared for good
+    /// by any other traffic.
+    search_linger: Option<Instant>,
+    other_traffic: bool,
     /// Bytes queued for the peer that the socket would not take yet. The stream
     /// is non-blocking (so socket reads never starve the mailbox), so a message
     /// larger than the send buffer — a full share listing is easily megabytes —
@@ -130,6 +134,11 @@ const MAX_PENDING_WRITE: usize = 32 * 1024 * 1024;
 const IDLE_DISCONNECT: Duration = Duration::from_mins(5);
 /// How long a replaced connection keeps listening for replies in flight.
 const RETIRE_GRACE: Duration = Duration::from_secs(30);
+/// A connection that has only brought us search results closes this long after
+/// the last one, as Nicotine+ does: a popular search draws thousands of
+/// responders, and each one holding a connection (and a thread) for minutes
+/// turns the later ones away at the registry's door.
+const SEARCH_LINGER: Duration = Duration::from_secs(2);
 /// Socket buffers read per tick: 64 KiB, against a 100 ms tick.
 const READS_PER_TICK: usize = 64;
 
@@ -169,6 +178,8 @@ impl PeerActor {
             pending_write: Vec::new(),
             last_activity: Instant::now(),
             retire_deadline: None,
+            search_linger: None,
+            other_traffic: false,
         }
     }
 
@@ -252,6 +263,19 @@ impl PeerActor {
                     self.queued_messages.push(msg);
                     return;
                 }
+            }
+        }
+
+        match &msg {
+            PeerMessage::FileSearchResult(_) => {
+                if !self.other_traffic {
+                    self.search_linger = Some(Instant::now() + SEARCH_LINGER);
+                }
+            }
+            PeerMessage::ProcessRead | PeerMessage::SetUsername(_) | PeerMessage::Retire => {}
+            _ => {
+                self.other_traffic = true;
+                self.search_linger = None;
             }
         }
 
@@ -361,8 +385,8 @@ impl PeerActor {
             PeerMessage::ProcessRead => {
                 self.process_read();
             }
-            PeerMessage::UploadFailed(_, filename) => {
-                self.handle_upload_failed(filename);
+            PeerMessage::UploadFailed(reason, filename) => {
+                self.handle_upload_failed(reason, filename);
             }
         }
     }
@@ -515,11 +539,13 @@ impl PeerActor {
         }
     }
 
-    fn handle_upload_failed(&self, filename: String) {
+    /// [reason]: the peer's own words for a refusal (code 50), empty for an
+    /// UploadFailed (code 46).
+    fn handle_upload_failed(&self, reason: String, filename: String) {
         let username = self.peer_username();
         if let Err(e) = self
             .client_channel
-            .send(ClientOperation::UploadFailed(username, filename))
+            .send(ClientOperation::UploadFailed(username, filename, reason))
         {
             error!("[peer_actor] failed to forward UploadFailed: {}", e);
         }
@@ -997,6 +1023,13 @@ impl Actor for PeerActor {
                     self.process_read();
                     self.flush_pending_write();
 
+                    if self.stream.is_some()
+                        && self.search_linger.is_some_and(|t| t <= Instant::now())
+                        && !self.other_traffic
+                    {
+                        debug!("[peer:{}] search results delivered, closing", self.peer_username());
+                        self.disconnect();
+                    }
                     if self.stream.is_some()
                         && self.last_activity.elapsed() > IDLE_DISCONNECT
                     {

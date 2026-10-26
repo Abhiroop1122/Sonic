@@ -14,6 +14,10 @@ fn field<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
     value.get(key).and_then(Value::as_str).filter(|s| !s.is_empty())
         .ok_or_else(|| format!("Missing {key}"))
 }
+/// FLAC files a search collects before it stops: with "flac" in the query nearly every file is a
+/// match, and a popular album easily fills 5,000 before the network has finished answering.
+const MAX_SEARCH_FLAC: usize = 15_000;
+
 fn flac_path(path: &str) -> bool {
     path.len() <= 4096 && path.to_ascii_lowercase().ends_with(".flac")
         && !path.contains('\0') && path.split(['/', '\\']).all(|s| s != ".." && s != ".")
@@ -161,8 +165,12 @@ impl Runtime {
                     match outcome {
                         Ok(true) => {
                             client.set_upload_slots(2);
-                            client.set_max_peers(48);
-                            client.set_peer_admission_grace(Duration::from_secs(10));
+                            // A popular search draws thousands of responders through the server's
+                            // relay. Search-only connections now close two seconds after their
+                            // results, so the room turns over quickly; 48 seats with a 10 s hold
+                            // turned all but the first few dozen away.
+                            client.set_max_peers(256);
+                            client.set_peer_admission_grace(Duration::from_secs(2));
                             *lock(&runtime.client) = Some(Arc::new(client));
                             runtime.push(json!({"type":"session","state":"connected","username":username}));
                         }
@@ -181,29 +189,50 @@ impl Runtime {
                 let id = field(&value, "id")?.to_string();
                 let query = field(&value, "query")?.trim().to_string();
                 if query.len() < 2 || query.len() > 256 { return Err("Search must contain 2–256 characters".into()); }
+                // What goes on the wire: the cleaned-up terms (the query itself when not given), and
+                // the variants to widen to when no one answers at all. The server silently drops
+                // searches for some names; leaving one word out gets past it, and the app still
+                // keeps only folders that match every word.
+                let strings = |key: &str| -> Vec<String> {
+                    value[key].as_array().map(|a| a.iter().filter_map(Value::as_str).map(|s| s.trim().to_string())
+                        .filter(|s| s.len() >= 2 && s.len() <= 256).take(6).collect()).unwrap_or_default()
+                };
+                let mut queries = strings("queries"); if queries.is_empty() { queries.push(query.clone()); }
+                let variants: Vec<String> = strings("variants").into_iter().filter(|v| !queries.contains(v)).collect();
+                let widen_after = Duration::from_millis(value["widenAfterMs"].as_u64().unwrap_or(0).min(30_000));
                 // Only one active network search: duplicate query tokens in the
                 // upstream query-keyed index must never cross result identities.
                 for flag in lock(&self.searches).values() { flag.store(true, Ordering::Relaxed); }
                 lock(&self.searches).clear();
                 let cancelled = Arc::new(AtomicBool::new(false));
                 lock(&self.searches).insert(id.clone(), cancelled.clone());
-                client.start_search(&query).map_err(|e| e.to_string())?;
-                let duration = Duration::from_millis(value["timeoutMs"].as_u64().unwrap_or(12000).clamp(250, 60_000));
+                for q in &queries { client.start_search(q).map_err(|e| e.to_string())?; }
+                let mut duration = Duration::from_millis(value["timeoutMs"].as_u64().unwrap_or(12000).clamp(250, 60_000));
                 let runtime = self.clone();
                 let generation = self.generation.load(Ordering::SeqCst);
                 std::thread::spawn(move || {
                     let started = Instant::now();
+                    let admitted_before = soulseek_rs::types::PEERS_ADMITTED.load(Ordering::Relaxed);
+                    let refused_before = soulseek_rs::types::PEERS_REFUSED.load(Ordering::Relaxed);
                     let mut seen = HashSet::new();
                     let mut raw_files = 0usize;
                     let mut replies = 0usize;
+                    let mut active = queries.clone();
+                    let mut widened = false;
                     while started.elapsed() < duration && !cancelled.load(Ordering::Relaxed)
-                        && runtime.generation.load(Ordering::SeqCst) == generation && seen.len() < 5000 {
+                        && runtime.generation.load(Ordering::SeqCst) == generation && seen.len() < MAX_SEARCH_FLAC {
+                        if !widened && !variants.is_empty() && !widen_after.is_zero() && replies == 0 && started.elapsed() >= widen_after {
+                            widened = true;
+                            for v in &variants { if client.start_search(v).is_ok() { active.push(v.clone()); } }
+                            duration += Duration::from_secs(20);
+                            runtime.push(json!({"type":"search_widened","id":id,"queries":variants}));
+                        }
                         let mut batch = Vec::new();
-                        for response in client.take_search_results(&query) {
+                        for response in active.iter().flat_map(|q| client.take_search_results(q)) {
                             replies += 1;
                             raw_files += response.files.len();
                             for file in response.files {
-                                if seen.len() >= 5000 { break; }
+                                if seen.len() >= MAX_SEARCH_FLAC { break; }
                                 if flac_path(&file.name) && seen.insert((response.username.clone(), file.name.clone(), file.size)) {
                                     let mut event = file_json(&file.name, file.size, &file.attribs);
                                     event["username"] = json!(response.username); event["freeSlots"] = json!(response.slots);
@@ -220,13 +249,16 @@ impl Runtime {
                         std::thread::sleep(Duration::from_millis(100));
                     }
                     if runtime.generation.load(Ordering::SeqCst) == generation {
-                        runtime.push(json!({"type":"search_done","id":id,"cancelled":cancelled.load(Ordering::Relaxed),"limited":seen.len()>=5000,
-                            "rawFiles":raw_files,"peerReplies":replies,"elapsedMs":started.elapsed().as_millis() as u64}));
+                        runtime.push(json!({"type":"search_done","id":id,"cancelled":cancelled.load(Ordering::Relaxed),"limited":seen.len()>=MAX_SEARCH_FLAC,"widened":widened,
+                            "rawFiles":raw_files,"peerReplies":replies,"elapsedMs":started.elapsed().as_millis() as u64,
+                            "peersAdmitted":soulseek_rs::types::PEERS_ADMITTED.load(Ordering::Relaxed) - admitted_before,
+                            "peersRefused":soulseek_rs::types::PEERS_REFUSED.load(Ordering::Relaxed) - refused_before}));
                     }
                     // Do not remove a newer search registered under the same query.
                     let mut searches = lock(&runtime.searches);
                     if searches.get(&id).is_some_and(|f| Arc::ptr_eq(f, &cancelled)) {
-                        searches.remove(&id); let _ = client.forget_search(&query);
+                        searches.remove(&id);
+                        for q in &active { let _ = client.forget_search(q); }
                     }
                 });
             }
@@ -319,20 +351,26 @@ impl Runtime {
                 let client = self.client()?;
                 let files = value["files"].as_array().ok_or("Missing shared files")?;
                 if files.len() > 20_000 { return Err("The share folder contains too many files".into()); }
+                // One file that fails a check (not FLAC by name or content, changed since the scan,
+                // unreadable) is left out; it no longer takes the whole share down with it.
                 let mut entries = Vec::new();
+                let mut skipped = 0usize;
                 for item in files {
-                    let key = field(item,"key")?.to_string(); let path = field(item,"path")?.to_string();
-                    if !flac_path(&path) { return Err("Only FLAC files may be shared".into()); }
-                    let size = item["size"].as_u64().filter(|s|*s>=42).ok_or("Invalid shared file size")?;
-                    // Verify the real selected document, not its provider MIME or extension.
-                    let mut file = (self.open)(&key).map_err(|e|e.to_string())?;
-                    let (rate,depth,duration) = check_flac(&mut file).map_err(|e|e.to_string())?;
-                    if file.metadata().map_err(|e|e.to_string())?.len()!=size { return Err("The shared file changed; rescan the folder".into()); }
-                    entries.push(HostSharedFile{key,path,size,attributes:vec![(1,duration),(4,rate),(5,depth)]});
+                    let checked = (|| -> Result<HostSharedFile, String> {
+                        let key = field(item,"key")?.to_string(); let path = field(item,"path")?.to_string();
+                        if !flac_path(&path) { return Err("Only FLAC files may be shared".into()); }
+                        let size = item["size"].as_u64().filter(|s|*s>=42).ok_or("Invalid shared file size")?;
+                        // Verify the real selected document, not its provider MIME or extension.
+                        let mut file = (self.open)(&key).map_err(|e|e.to_string())?;
+                        let (rate,depth,duration) = check_flac(&mut file).map_err(|e|e.to_string())?;
+                        if file.metadata().map_err(|e|e.to_string())?.len()!=size { return Err("The shared file changed; rescan the folder".into()); }
+                        Ok(HostSharedFile{key,path,size,attributes:vec![(1,duration),(4,rate),(5,depth)]})
+                    })();
+                    match checked { Ok(entry) => entries.push(entry), Err(_) => skipped += 1 }
                 }
                 self.publish_shares(&client,entries.clone())?;
                 let count=entries.len(); *lock(&self.share_entries)=entries;
-                self.push(json!({"type":"shares","files":count}));
+                self.push(json!({"type":"shares","files":count,"skipped":skipped}));
             }
             _ => return Err(format!("Unknown native operation: {op}")),
         }

@@ -610,3 +610,9 @@ impl SessionWatch {
             .store(Self::LIVE, std::sync::atomic::Ordering::Relaxed);
     }
 }
+
+/// Peers admitted to the registry, and refused because it was full of busy peers, since the
+/// process started: a diagnostic the host reads to see whether a search or a download lost
+/// peers at the door.
+pub static PEERS_ADMITTED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static PEERS_REFUSED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);

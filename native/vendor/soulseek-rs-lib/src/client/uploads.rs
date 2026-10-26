@@ -196,6 +196,7 @@ impl Client {
         client_context: Arc<RwLock<ClientContext>>,
         username: &str,
         filename: Option<&str>,
+        reason: &str,
     ) {
         let failed_tokens = match client_context.read_safe() {
             Ok(context) => {
@@ -216,9 +217,13 @@ impl Client {
                 for token in failed_tokens {
                     context.downloads.update_status(
                         token,
-                        DownloadStatus::Failed(Some(
-                            "The upload failed on the other side".to_string(),
-                        )),
+                        // Keep the peer's reason ("Too many files", "Banned"…):
+                        // the host waits on a busy queue but not on a ban.
+                        DownloadStatus::Failed(Some(if reason.trim().is_empty() {
+                            "The upload failed on the other side".to_string()
+                        } else {
+                            format!("The other side refused: {}", reason.trim())
+                        })),
                     );
                     context.downloads.remove(token);
                 }

@@ -263,25 +263,38 @@ impl ClientContext {
             let Some(job) = self.uploads.remove(token) else {
                 continue;
             };
+            let mut accepted = false;
+            if let Some(waiting) = self.pending_serves.get_mut(&job.downloader) {
+                accepted = waiting.contains(token);
+                waiting.retain(|t| t != token);
+                if waiting.is_empty() {
+                    self.pending_serves.remove(&job.downloader);
+                }
+            }
             self.upload_events.push(UploadInfo {
                 username: job.downloader,
                 filename: job.virtual_path,
                 size: job.size,
                 bytes_sent: 0,
                 speed_bytes_per_sec: 0.0,
-                status: UploadStatus::Failed(
-                    "no answer to the transfer offer".to_string(),
-                ),
+                status: UploadStatus::Failed(if accepted {
+                    "couldn't reach them to send the file".to_string()
+                } else {
+                    "no answer to the transfer offer".to_string()
+                }),
             });
         }
         !stale.is_empty()
     }
 
-    /// The peer accepted the offer for `token`; it may still take a while to
-    /// resolve their address and connect, and that wait must not expire it.
+    /// The peer accepted: the job now waits only for their address. It gets a
+    /// fresh [`OFFER_TIMEOUT`] for that, and is dropped like an unanswered offer
+    /// if it never resolves. Before, an accepted job whose peer listed port 0
+    /// (firewalled: most phones and many home connections) held its slot, and
+    /// protected that peer, for good; two of them stopped every upload.
     pub fn mark_offer_answered(&mut self, token: u32) {
         if let Some(job) = self.uploads.get_mut(&token) {
-            job.offered = None;
+            job.offered = Some(Instant::now());
         }
     }
 
@@ -532,15 +545,27 @@ mod context_tests {
     }
 
     #[test]
-    fn an_accepted_offer_waiting_on_an_address_does_not_expire() {
+    fn an_accepted_offer_waiting_on_an_address_gets_its_own_window_then_lets_go() {
         let (mut ctx, mut token) = context(1);
         ask(&mut ctx, "slow", "f.mp3");
         offered(&mut ctx, &mut token);
 
         ctx.mark_offer_answered(1);
-        let later = std::time::Instant::now() + OFFER_TIMEOUT * 2;
-        assert!(!ctx.expire_stale_offers(later), "an answered offer stays");
+        ctx.pending_serves.entry("slow".to_string()).or_default().push(1);
+        let soon = std::time::Instant::now() + OFFER_TIMEOUT / 2;
+        assert!(!ctx.expire_stale_offers(soon), "an answered offer has time to resolve");
         assert!(ctx.uploads.contains_key(&1));
+
+        // A peer whose address never resolves (the server lists port 0) frees its slot
+        // and stops being protected, instead of holding both for the whole session.
+        let later = std::time::Instant::now() + OFFER_TIMEOUT * 2;
+        assert!(ctx.expire_stale_offers(later));
+        assert!(!ctx.uploads.contains_key(&1));
+        assert!(!ctx.pending_serves.contains_key("slow"));
+        assert!(ctx.take_upload_events().iter().any(|event| {
+            event.username == "slow"
+                && matches!(&event.status, UploadStatus::Failed(why) if why.contains("couldn't reach"))
+        }));
     }
 
     #[test]

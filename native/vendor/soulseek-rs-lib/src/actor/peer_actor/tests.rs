@@ -67,9 +67,10 @@ fn an_upload_failed_message_reaches_the_client_as_this_peer() {
     ));
 
     match rx.try_recv() {
-        Ok(ClientOperation::UploadFailed(username, filename)) => {
+        Ok(ClientOperation::UploadFailed(username, filename, reason)) => {
             assert_eq!(username, "bob");
             assert_eq!(filename, "song.mp3");
+            assert!(reason.is_empty());
         }
         other => panic!("expected UploadFailed, got {other:?}"),
     }

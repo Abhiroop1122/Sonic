@@ -58,6 +58,7 @@ impl Client {
                         client_context.clone(),
                         &username,
                         None,
+                        "",
                     );
                     Self::release_upload_slots(client_context, &username);
                 }

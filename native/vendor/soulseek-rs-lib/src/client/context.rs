@@ -736,8 +736,13 @@ impl ClientContext {
             })
             .map(|d| d.username.clone())
             .collect();
-        protected
-            .extend(self.active_uploads.values().map(|u| u.username.clone()));
+        // Finished uploads stay listed for reporting; only running ones hold a peer.
+        protected.extend(
+            self.active_uploads
+                .values()
+                .filter(|u| matches!(u.status, crate::types::UploadStatus::InProgress))
+                .map(|u| u.username.clone()),
+        );
         protected.extend(self.uploads.values().map(|j| j.downloader.clone()));
         protected
             .extend(self.upload_queue.iter().map(|q| q.downloader.clone()));

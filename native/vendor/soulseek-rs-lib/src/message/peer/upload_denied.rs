@@ -17,7 +17,7 @@ impl MessageHandler<PeerMessage> for UploadDeniedHandler {
         if reason == "Queued" {
             return;
         }
-        let _ = sender.send(PeerMessage::UploadFailed(String::new(), filename));
+        let _ = sender.send(PeerMessage::UploadFailed(reason, filename));
     }
 }
 

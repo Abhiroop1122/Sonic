@@ -118,6 +118,7 @@ impl PeerRegistry {
                 .min_by_key(|(_, (id, _))| *id)
                 .map(|(name, _)| name.clone());
             let Some(victim) = victim else {
+                crate::types::PEERS_REFUSED.fetch_add(1, Ordering::Relaxed);
                 return Err(format!(
                     "peer registry at capacity ({capacity}) and every peer \
                      is busy; refusing {username}"
@@ -153,6 +154,7 @@ impl PeerRegistry {
         }
 
         admitted.insert(id, Instant::now());
+        crate::types::PEERS_ADMITTED.fetch_add(1, Ordering::Relaxed);
         Ok(handle)
     }
 
