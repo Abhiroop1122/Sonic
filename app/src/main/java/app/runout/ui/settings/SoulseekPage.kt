@@ -203,6 +203,7 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
                 enabled = session.hasAccount && (state.soulseekBackgroundConsent || session.connected),
             ) { help = HelpBackground }
             if (state.soulseekBackgroundConsent && !state.soulseekStayOnline) BasicText("background mode is paused. check notification permission and reconnect to resume.", style = Room.LabelQuiet.copy(lineHeight = 15.sp))
+            if (session.connected) ReachabilityLine(state.soulseekReachability)
         }
         // The one warning on the page: amber, a bold "!", and its "?".
         Row(Modifier.fillMaxWidth().background(Room.Warning).padding(11.dp), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -255,5 +256,39 @@ private fun TransferTotalsBlock(totals: app.runout.soulseek.TransferTotals) {
                 .format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.ENGLISH)).lowercase()
         }
         BasicText(since?.let { "on this phone since $it." } ?: "counted on this phone from your first transfer.", style = Room.LabelQuiet)
+    }
+}
+
+/**
+ * Whether other people can reach this phone: the router's answer when Sonic asked it to forward
+ * its port. Reachable, two people behind routers can still exchange files; not, only with people
+ * whose own port is open. When the router won't say yes, how to forward the port by hand.
+ */
+@Composable
+private fun ReachabilityLine(port: app.runout.soulseek.PortState) {
+    val (lamp, text) = when (port) {
+        is app.runout.soulseek.PortState.Open -> Room.Online to "others can reach you: your router forwards port ${port.port} (${port.via})" + (port.external?.let { " at $it" } ?: "") + "."
+        is app.runout.soulseek.PortState.BehindCgnat -> Room.Warning to "your router opened port ${port.port}, but your internet provider has its own router in front of it" +
+            " (your router is ${port.router} outside" + (port.public?.let { ", the internet sees $it" } ?: "") + "), and that one lets no one in." +
+            " ask your provider for a public ip address. until then you can download from people whose port is open."
+        app.runout.soulseek.PortState.Mapping -> Room.Quiet to "asking your router to open a port…"
+        app.runout.soulseek.PortState.MobileData -> Room.Warning to "on mobile data no one can reach you: you can download, but phone-to-phone sharing waits for wi-fi."
+        is app.runout.soulseek.PortState.Closed -> Room.Warning to "others can't reach you: ${port.reason} you can still download from people whose port is open."
+        app.runout.soulseek.PortState.Off -> Room.Quiet to "not connected to a network."
+    }
+    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().testTag("reachability"), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.Top) {
+            Box(Modifier.padding(top = 4.dp).size(8.dp).background(lamp))
+            BasicText(text, style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.weight(1f))
+        }
+        if (port is app.runout.soulseek.PortState.Closed && port.port > 0 && port.local != null) {
+            // Sonic keeps its port from one sign-in to the next, so a forward made by hand keeps working.
+            BasicText(
+                "or forward it by hand: in your router's settings, send tcp port ${port.port} to ${port.local}, this phone. " +
+                    "sonic always listens on that port. reserve the address for this phone too, so the router doesn't hand it to another device.",
+                style = Room.LabelQuiet.copy(lineHeight = 15.sp),
+                modifier = Modifier.padding(start = 19.dp).testTag("port-forward-hint"),
+            )
+        }
     }
 }

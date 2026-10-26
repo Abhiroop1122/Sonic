@@ -203,6 +203,8 @@ data class RoomState(
     val coverLookupNoticePending: Boolean = false,
     /** Asked once after the first Soulseek album: share the download folder? */
     val soulseekShareOffer: Boolean = false,
+    /** Whether the router forwards Sonic's port (Settings › Soulseek). */
+    val soulseekReachability: app.runout.soulseek.PortState = app.runout.soulseek.PortState.Off,
     /** A friend's shelf open in Friends. */
     val soulseekShelf: app.runout.soulseek.SoulseekShelf? = null,
     /** This version's notes, on the first launch after an update or from About. */

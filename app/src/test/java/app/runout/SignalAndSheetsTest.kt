@@ -233,8 +233,6 @@ class SignalAndSheetsTest {
 
     @Test fun `chat bubbles are solid, mine black and theirs orange, over an outlined composer`() {
         val chat = room.copy(
-            // A Soulseek download in the crate, so there's a record that can be sent.
-            albums = room.albums + Fixtures.nightDrive().copy(id = "slsk", source = app.runout.model.Source.SOULSEEK, from = "ro", remoteFolder = "Music/Night Drive"),
             soulseekConversation = "maya",
             soulseekConversations = listOf(app.runout.soulseek.SoulseekConversation("maya", listOf(
                 app.runout.soulseek.SoulseekMessage("1", "maya", "hello", 1L, false, app.runout.soulseek.SoulseekMessageState.SENT),
@@ -248,7 +246,8 @@ class SignalAndSheetsTest {
         assertTrue(compose.onNodeWithTag("bubble:theirs").getBoundsInRoot().left < compose.onNodeWithTag("bubble:mine").getBoundsInRoot().left)
         // The composer stands clear of the body's left edge.
         assertTrue(compose.onNodeWithTag("field:Private message").getBoundsInRoot().left > compose.onNodeWithTag("bubble:theirs").getBoundsInRoot().left)
-        compose.onNodeWithContentDescription("Send a record").assertIsEnabled()
+        // The composer's key opens their shelf.
+        compose.onNodeWithContentDescription("Browse their shelf").assertIsEnabled()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/34_chat.png")
     }
 

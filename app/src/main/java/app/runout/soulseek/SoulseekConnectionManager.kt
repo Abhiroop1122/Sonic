@@ -28,6 +28,8 @@ internal class SoulseekConnectionManager(
     private val worker: CoroutineDispatcher = Dispatchers.IO,
     /** Whether a transfer, search or browse is waiting on events, so they are fetched quickly. */
     private val busy: () -> Boolean = { false },
+    /** The port to listen on, kept between sessions so the router's forward stays good; 0 for any. */
+    private val listenPort: () -> Int = { 0 },
 ) {
     private val vault = SoulseekCredentialVault(context)
     private val prefs = context.getSharedPreferences("soulseek-connection", Context.MODE_PRIVATE)
@@ -121,7 +123,7 @@ internal class SoulseekConnectionManager(
         generation++
         val epoch = generation
         wire.withLock { client = current }
-        try { command("login") { put("username", pair.first); put("password", pair.second) } }
+        try { command("login") { put("username", pair.first); put("password", pair.second); put("listenPort", listenPort()) } }
         catch (e: Exception) {
             detach(cancelRetry = false)
             _session.value = SoulseekSession(SoulseekConnection.RECONNECTING, pair.first, e.message, authenticated, SoulseekDisconnectReason.NETWORK_LOST)

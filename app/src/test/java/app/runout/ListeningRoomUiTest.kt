@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertTextContains
@@ -463,6 +464,20 @@ class ListeningRoomUiTest {
         assertEquals(listOf("wifi:false", "slots:3"), calls)
         compose.onNodeWithTag("sharing-waiting-wifi").performScrollTo().assertIsDisplayed()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/soulseek_upload_settings.png")
+    }
+
+    @Test
+    fun `a closed port shows how to forward it by hand, and a second router in front says cgnat`() {
+        portrait()
+        val connected = SoulseekSession(SoulseekConnection.CONNECTED, "abhi", authenticated = true)
+        var reach by mutableStateOf<app.runout.soulseek.PortState>(app.runout.soulseek.PortState.Closed("your router didn't open a port.", 45123, "192.168.1.20"))
+        compose.setContent { RoomScreen(state().copy(soulseekSession = connected, soulseekReachability = reach), RecordingActions(), initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.ACCOUNT) }
+        compose.onNodeWithTag("port-forward-hint").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("tcp port 45123 to 192.168.1.20", substring = true).assertExists()
+
+        reach = app.runout.soulseek.PortState.BehindCgnat(45123, "100.72.3.9", "203.0.113.7")
+        compose.onNodeWithText("internet provider has its own router", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("port-forward-hint").assertDoesNotExist()
     }
 
     @Test
@@ -1107,28 +1122,18 @@ class ListeningRoomUiTest {
     }
 
     @Test
-    fun `only Soulseek downloads can be sent, and their card opens that exact folder`() {
+    fun `a chat's key opens their shelf, and a card sent before still opens that exact folder`() {
         portrait()
         val actions = object : RecordingActions() {
             override fun openSoulseekFolder(username: String, directory: String) { log += "openFolder:$username:$directory" }
         }
-        // Nothing from Soulseek yet: the key is off and says why.
         var s by mutableStateOf(state(contacts = listOf(SoulseekContact("maya", true))).copy(soulseekConversation = "maya"))
         compose.setContent { RoomScreen(s, actions, initialPanel = Panel.FRIENDS) }
-        compose.onNodeWithTag("share-record").assertIsNotEnabled()
-        compose.onNodeWithTag("send-record-rule").assertIsDisplayed()
-        // One download from ro's share: the picker offers just that, and the card carries its folder.
-        val download = albums[0].copy(id = "slsk-1", source = Source.SOULSEEK, from = "ro", remoteFolder = "Music/Air/Moon Safari")
-        s = s.copy(albums = albums + download)
-        compose.waitForIdle()
+        // Records aren't sent from a chat any more: its key opens their shelf instead.
+        compose.onNodeWithTag("share-record").assertDoesNotExist()
         compose.onNodeWithTag("send-record-rule").assertDoesNotExist()
-        compose.onNodeWithTag("share-record").performClick()
-        compose.onAllNodesWithTag("pick-record:slsk-1").assertCountEquals(1)
-        compose.onAllNodesWithTag("pick-record:${albums[0].id}").assertCountEquals(0)
-        compose.onNodeWithTag("send-record").performClick()
-        val sent = actions.log.single { it.startsWith("soulseekMessage:maya:") }.removePrefix("soulseekMessage:maya:")
-        val card = app.runout.ui.RecordCard.parse(sent)!!
-        assertEquals("ro" to "Music/Air/Moon Safari", card.peer to card.folder)
+        compose.onNodeWithTag("browse-shelf").assertIsEnabled().performClick()
+        assertTrue(actions.log.toString(), "shelf:maya" in actions.log)
         // A card sent to you names the folder: "open folder" lists it, then Dig shows it.
         val received = app.runout.ui.RecordCard("Air", "Moon Safari", null, "ro", "Music/Air/Moon Safari").encode()
         s = s.copy(albums = albums, soulseekConversations = listOf(SoulseekConversation("maya", listOf(SoulseekMessage("9", "maya", received, 1_792_540_000_000L, outgoing = false, state = SoulseekMessageState.RECEIVED, read = true)), 0)))

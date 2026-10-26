@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
             val uploads by graph.soulseek.uploads.collectAsStateWithLifecycle()
             val totals by graph.soulseek.totals.collectAsStateWithLifecycle()
             val shareOffer by graph.soulseek.shareOffer.collectAsStateWithLifecycle()
+            val reachability by graph.soulseek.reachability.collectAsStateWithLifecycle()
             val shelf by graph.soulseek.shelf.collectAsStateWithLifecycle()
             val contacts by graph.soulseek.contacts.collectAsStateWithLifecycle()
             val conversations by graph.soulseek.conversations.collectAsStateWithLifecycle()
@@ -395,6 +396,7 @@ class MainActivity : ComponentActivity() {
                     soulseekUploads = uploads,
                     soulseekTotals = totals,
                     soulseekShareOffer = shareOffer,
+                    soulseekReachability = reachability,
                     soulseekShelf = shelf,
                     whatsNew = whatsNew,
                     soulseekContacts = contacts,

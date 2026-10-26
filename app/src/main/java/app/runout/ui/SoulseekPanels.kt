@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -373,7 +374,7 @@ fun SoulseekMessagesPanel(state: RoomState, actions: RoomActions, onAccount: () 
     val shelf = state.soulseekShelf
     Box(Modifier.fillMaxSize().testTag("panel:messages")) {
         if (shelf != null) {
-            FriendShelf(shelf, state.soulseekSession.signedIn, onBack = actions::closeSoulseekShelf) { dir ->
+            FriendShelf(shelf, state.soulseekSession.signedIn, state.soulseekReachability, onBack = actions::closeSoulseekShelf) { dir ->
                 actions.openSoulseekFolder(shelf.username, dir); onDig()
             }
         } else if (peer == null) {
@@ -554,12 +555,6 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
     val conversation = state.soulseekConversations.firstOrNull { it.username == peer }
     LaunchedEffect(peer, conversation?.unread) { actions.markSoulseekRead(peer) }
     val contact = state.soulseekContacts.firstOrNull { it.username == peer }
-    var sharing by remember { mutableStateOf(false) }
-    // Only Soulseek downloads travel as cards: the card carries their peer and folder, so the
-    // other person gets that exact copy, not whatever a search turns up.
-    val sendable = remember(state.albums, state.soulseekTransfers) {
-        state.albums.mapNotNull { a -> shareSource(a, state.soulseekTransfers)?.let { a to it } }
-    }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         Row(
             Modifier.fillMaxWidth().hairlineBottom(Room.Ink).padding(bottom = 11.dp),
@@ -575,7 +570,6 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 BasicText(peer, style = Room.Strong, maxLines = 1)
-                if (state.soulseekSession.signedIn) ArrowLink("their shelf", { actions.browseSoulseekShelf(peer) }, tag = "browse-shelf")
                 if (contact == null) ArrowLink("add friend", { actions.addSoulseekContact(peer) }, tag = "add-friend")
                 else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(8.dp).background(if (contact.online) Room.Online else Room.Background).then(if (contact.online) Modifier else Modifier.border(1.dp, Room.Ink)))
@@ -623,7 +617,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                 }
             }
         }
-        // The composer: the field boxed in a 1 dp ink outline, 11 dp in, then the send-a-record key
+        // The composer: the field boxed in a 1 dp ink outline, 11 dp in, then the their-shelf key
         // and the black send key; 11 dp clear of the page's left edge and its foot.
         Column(Modifier.padding(start = 11.dp, bottom = 11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             var text by rememberSaveable(peer) { mutableStateOf("") }
@@ -657,14 +651,16 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                         }
                     },
                 )
-                SquareKey("Send a record", { sharing = true }, "share-record", enabled = state.soulseekSession.signedIn && sendable.isNotEmpty(), filled = false, glyphSize = 22.dp) { c ->
-                    // A record: the rim, two grooves, the label disc and its spindle hole.
+                SquareKey("Browse their shelf", { actions.browseSoulseekShelf(peer) }, "browse-shelf", enabled = state.soulseekSession.signedIn, filled = false, glyphSize = 22.dp) { c ->
+                    // Their shelf: a crate, open at the top, three sleeves standing in it.
                     val w = size.width
-                    drawCircle(c, w * 0.47f, center, style = Stroke(1.5.dp.toPx()))
-                    drawCircle(c, w * 0.37f, center, style = Stroke(0.75.dp.toPx()))
-                    drawCircle(c, w * 0.29f, center, style = Stroke(0.75.dp.toPx()))
-                    drawCircle(c, w * 0.18f, center)
-                    drawCircle(Room.Background, w * 0.05f, center)
+                    val line = 1.5.dp.toPx()
+                    val thin = 1.dp.toPx()
+                    val crate = Path().apply { moveTo(w * 0.08f, w * 0.42f); lineTo(w * 0.08f, w * 0.92f); lineTo(w * 0.92f, w * 0.92f); lineTo(w * 0.92f, w * 0.42f) }
+                    drawPath(crate, c, style = Stroke(line))
+                    listOf(0.28f to 0.10f, 0.50f to 0.22f, 0.72f to 0.04f).forEach { (x, top) ->
+                        drawRect(c, Offset(w * (x - 0.09f), w * top), androidx.compose.ui.geometry.Size(w * 0.18f, w * (0.86f - top)), style = Stroke(thin))
+                    }
                 }
                 SquareKey("Send message", send, "send-message", enabled = canSend, filled = true) { c ->
                     // An arrow, up.
@@ -676,13 +672,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                 }
             }
             if (bytes > 4096) BasicText("messages must contain 1–4,096 bytes of text.", style = Room.Label.copy(color = Room.Danger))
-            if (state.soulseekSession.signedIn && sendable.isEmpty()) BasicText(SEND_RECORD_RULE, style = Room.LabelQuiet, modifier = Modifier.testTag("send-record-rule"))
         }
-    }
-    if (sharing) RecordPicker(peer, sendable.map { it.first }, onDismiss = { sharing = false }) { album ->
-        val (from, folder) = sendable.first { it.first.id == album.id }.second
-        actions.sendSoulseekMessage(peer, RecordCard.of(album, from, folder).encode()) {}
-        sharing = false
     }
 }
 
@@ -746,49 +736,6 @@ private fun RecordCardView(card: RecordCard, state: RoomState, mine: Boolean, on
 }
 
 /**
- * The Send a record panel: "to maya · from your crate · 14", your records three to a row (the
- * chosen one boxed in 2 dp ink), and the black "send <title>" key.
- */
-@Composable
-private fun RecordPicker(peer: String, albums: List<app.runout.model.Album>, onDismiss: () -> Unit, onPick: (app.runout.model.Album) -> Unit) {
-    var pick by rememberSaveable { mutableStateOf(albums.firstOrNull()?.id) }
-    val chosen = albums.firstOrNull { it.id == pick }
-    PageSheet("record-picker", onDismiss, title = "send a record") {
-        BasicText("to $peer · from your crate · ${albums.size}", style = Room.LabelQuiet)
-        BasicText(SEND_RECORD_RULE, style = Room.LabelQuiet)
-        Column(Modifier.heightIn(max = 330.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            albums.chunked(3).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    row.forEach { a ->
-                        Column(
-                            Modifier
-                                .weight(1f)
-                                .border(2.dp, if (a.id == pick) Room.Ink else Color.Transparent)
-                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { pick = a.id }
-                                .semantics { if (a.id == pick) stateDescription = "Selected" }
-                                .testTag("pick-record:${a.id}")
-                                .padding(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            SleeveArt(a, Modifier.fillMaxWidth().aspectRatio(1f), showSticker = false)
-                            BasicText(a.title, style = Room.Label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            BasicText(a.artist, style = Room.LabelQuiet, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
-        TeButton(
-            chosen?.let { "send ${it.title.lowercase()}" } ?: "send a record",
-            { chosen?.let(onPick) },
-            Modifier.fillMaxWidth().testTag("send-record"),
-            enabled = chosen != null,
-        )
-    }
-}
-
-/**
  * A record sent in a Soulseek private message. It travels as ordinary text that any Soulseek
  * client shows sensibly ("♪ Album — Artist · FLAC 24/96"), plus a last line Runout recognises:
  * `runout:record?artist=…&album=…&q=…&u=…&d=…`, URL-encoded. `u` and `d` are the Soulseek peer
@@ -817,20 +764,6 @@ internal data class RecordCard(val artist: String, val album: String, val qualit
             return RecordCard(artist, album, group(3), peer.takeIf { source }, folder.takeIf { source })
         }
     }
-}
-
-private const val SEND_RECORD_RULE = "only records you downloaded on soulseek can be sent."
-
-/**
- * Where a record can be sent from: the Soulseek peer and folder you downloaded it from, kept on
- * the album, else read off its first finished download. Only Soulseek downloads have one.
- */
-internal fun shareSource(album: app.runout.model.Album, transfers: List<SoulseekTransfer>): Pair<String, String>? {
-    if (album.source != app.runout.model.Source.SOULSEEK) return null
-    val from = album.from; val folder = album.remoteFolder
-    if (from != null && !folder.isNullOrBlank()) return from to folder
-    val done = transfers.firstOrNull { it.albumId == album.id && it.state == SoulseekTransferState.COMPLETED } ?: return null
-    return done.username to done.directory.ifBlank { return null }
 }
 
 /** Whether Android's "Background usage" is off for Runout. */
@@ -883,7 +816,7 @@ private fun BackgroundUseNote(onHelp: () -> Unit) {
  * A folder opens in Dig's folder view, with its tracks and the key to download it.
  */
 @Composable
-private fun FriendShelf(shelf: app.runout.soulseek.SoulseekShelf, signedIn: Boolean, onBack: () -> Unit, onOpen: (String) -> Unit) {
+private fun FriendShelf(shelf: app.runout.soulseek.SoulseekShelf, signedIn: Boolean, ours: app.runout.soulseek.PortState, onBack: () -> Unit, onOpen: (String) -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     PageStep(onBack)
     Column(Modifier.fillMaxSize().testTag("friend-shelf"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -899,11 +832,10 @@ private fun FriendShelf(shelf: app.runout.soulseek.SoulseekShelf, signedIn: Bool
                 DotVinylSpinner(Modifier.size(132.dp), description = "Reading their shelf")
                 BasicText("reading their shelf…", style = Room.LabelQuiet)
             }
-            shelf.error != null -> BasicText(
-                if (signedIn) "${shelf.username} didn't answer. they may be offline, or not sharing anything right now." else "sign in to see their shelf.",
-                style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.testTag("shelf-error"),
+            shelf.folders.isEmpty() -> BasicText(
+                shelf.problem(signedIn, ours).orEmpty(),
+                style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.testTag(if (shelf.error != null) "shelf-error" else "shelf-empty"),
             )
-            shelf.folders.isEmpty() -> BasicText("${shelf.username} shares no flac albums right now.", style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("shelf-empty"))
             else -> {
                 BasicText("${shelf.folders.size} flac folders · ${shelf.folders.sumOf { it.tracks.size }} tracks", style = Room.LabelQuiet)
                 androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().weight(1f)) {

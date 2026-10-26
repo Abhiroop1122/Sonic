@@ -6,7 +6,6 @@ import app.runout.model.Source
 import app.runout.soulseek.SoulseekTransfer
 import app.runout.soulseek.SoulseekTransferState
 import app.runout.ui.RecordCard
-import app.runout.ui.shareSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -35,20 +34,6 @@ class RecordCardTest {
         val old = "♪ Moon Safari — Air · FLAC\nrunout:record?artist=Air&album=Moon+Safari&q=FLAC"
         assertEquals(RecordCard("Air", "Moon Safari", "FLAC"), RecordCard.parse(old))
         assertEquals(RecordCard("Air", "Moon Safari", null), RecordCard.parse("runout:record?artist=Air&album=Moon+Safari"))
-    }
-
-    @Test fun `only Soulseek downloads have somewhere to send from`() {
-        val base = Album("a", "Moon Safari", "Air", 1998, "", emptyList(), AudioQuality("FLAC", 16, 44_100))
-        assertNull(shareSource(base, emptyList()))
-        assertNull(shareSource(base.copy(source = Source.RECEIVED, from = "maya", remoteFolder = "x"), emptyList()))
-        val kept = base.copy(source = Source.SOULSEEK, from = "ro", remoteFolder = "Music/Air/Moon Safari")
-        assertEquals("ro" to "Music/Air/Moon Safari", shareSource(kept, emptyList()))
-        // Downloaded before the folder was kept: its first finished download says where.
-        val older = base.copy(source = Source.SOULSEEK, from = "ro")
-        fun transfer(id: String, user: String, state: SoulseekTransferState, album: String? = "a") =
-            SoulseekTransfer(id, user, "Music\\Air\\Moon Safari\\0$id.flac", 1, 1, state, albumId = album)
-        assertNull(shareSource(older, listOf(transfer("1", "ro", SoulseekTransferState.FAILED), transfer("2", "ro", SoulseekTransferState.COMPLETED, album = "b"))))
-        assertEquals("kai" to "Music/Air/Moon Safari", shareSource(older, listOf(transfer("1", "ro", SoulseekTransferState.FAILED), transfer("2", "kai", SoulseekTransferState.COMPLETED))))
     }
 
     @Test fun `ordinary messages are not cards`() {

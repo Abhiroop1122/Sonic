@@ -253,6 +253,7 @@ open class RecordingActions : RoomActions {
     override fun importAutoEq() { log += "autoeq" }
     override fun rename(name: String) { log += "rename:$name" }
     override fun startStop() { log += "startStop" }
+    override fun browseSoulseekShelf(username: String) { log += "shelf:$username" }
     override fun nextTrack() { log += "next" }
     override fun previousTrack() { log += "prev" }
     override fun dismissMessage() { log += "dismissMessage" }

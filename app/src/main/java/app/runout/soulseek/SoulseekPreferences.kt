@@ -46,6 +46,12 @@ class SoulseekPreferences(context: Context) {
     /** Asked once, after the first download, whether to share the download folder: either answer stands. */
     fun shareAsked(owner: String) = prefs.getBoolean(key(owner, "shareAsked"), false)
     fun setShareAsked(owner: String) { prefs.edit().putBoolean(key(owner, "shareAsked"), true).apply() }
+    /**
+     * The port Sonic listens on, picked once at random (40000–59999) and kept, as Nicotine+ keeps
+     * 2234: the router's forward is for one port, and a new one every session would need a new one.
+     */
+    fun listenPort(): Int = prefs.getInt("listenPort", 0).takeIf { it in 1024..65535 }
+        ?: (40_000 + java.security.SecureRandom().nextInt(20_000)).also { prefs.edit().putInt("listenPort", it).apply() }
     fun turtle() = prefs.getBoolean("turtle", false)
     fun setTurtle(enabled: Boolean) { prefs.edit().putBoolean("turtle", enabled).apply(); _revision.value++ }
     private fun key(owner: String, option: String) = SoulseekPolicy.digest(owner) + ":" + option

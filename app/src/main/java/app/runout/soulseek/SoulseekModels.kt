@@ -25,7 +25,29 @@ enum class SearchPhase { IDLE, SEARCHING, COMPLETE, CANCELLED, FAILED, INTERRUPT
 /** [widened]: no one answered the words as typed, so the search went out again with one word left out at a time. */
 data class SoulseekSearchStatus(val id: String? = null, val query: String = "", val phase: SearchPhase = SearchPhase.IDLE, val limited: Boolean = false, val error: String? = null, val widened: Boolean = false)
 /** A friend's shelf: the FLAC folders they share, from one browse of their whole share. */
-data class SoulseekShelf(val requestId: String, val username: String, val folders: List<ShelfFolder> = emptyList(), val loading: Boolean = true, val error: String? = null)
+data class SoulseekShelf(
+    val requestId: String, val username: String, val folders: List<ShelfFolder> = emptyList(), val loading: Boolean = true, val error: String? = null,
+    /** Why it failed: OFFLINE, UNREACHABLE (neither side could connect), NO_ANSWER, or null. */
+    val reason: String? = null,
+    /** Every file they share, FLAC or not; -1 when not known. */
+    val total: Int = -1,
+) {
+    /** What to say instead of folders, or null while loading or when there are folders to show. */
+    fun problem(signedIn: Boolean, ours: PortState): String? = when {
+        loading -> null
+        error != null && !signedIn -> "sign in to see their shelf."
+        reason == "OFFLINE" -> "$username is offline. their shelf opens when they're back on soulseek."
+        reason == "UNREACHABLE" && ours is PortState.Open ->
+            "couldn't connect to $username, and they couldn't connect to you. their router lets no one in, so they need to open a port on their side."
+        reason == "UNREACHABLE" ->
+            "couldn't connect to $username, and they couldn't connect to you: neither of you has an open port. open yours in settings › soulseek › connection."
+        error != null -> "$username didn't answer. they may be busy right now; try again in a minute."
+        folders.isNotEmpty() -> null
+        total == 0 -> "$username isn't sharing anything right now."
+        total > 0 -> "$username shares $total files, but no flac albums."
+        else -> "$username shares no flac albums right now."
+    }
+}
 data class ShelfFolder(val directory: String, val tracks: List<SoulseekSearchResult>) {
     val title: String get() = directory.substringAfterLast('/').ifBlank { directory }
     val parent: String get() = directory.substringBeforeLast('/', "")

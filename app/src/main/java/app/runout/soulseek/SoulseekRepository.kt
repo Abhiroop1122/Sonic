@@ -31,6 +31,9 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -85,7 +88,16 @@ class SoulseekRepository(
     private var ownerJob: Job? = null
     private var observedOwner: String? = null
     private val connection = SoulseekConnectionManager(context, scope, { transportFactory(::openSharedFile) },
-        { backgroundConsented() || hasActiveTransfers() }, ::handleEvent, { _error.value = it }, busy = ::nativeBusy)
+        { backgroundConsented() || hasActiveTransfers() }, ::handleEvent, { _error.value = it }, busy = ::nativeBusy,
+        listenPort = { preferences.listenPort() })
+    private val ports = PortMapper(context, scope)
+    /** Whether the router forwards Sonic's port, so other people can reach this phone (Settings › Soulseek). */
+    val reachability: StateFlow<PortState> get() = _reachability
+    /** Our address as the Soulseek server sees it, for telling an open router from one behind another (CGNAT). */
+    private val publicIp = MutableStateFlow<String?>(null)
+    private val _reachability = combine(ports.state, publicIp) { state, ip -> PortMapper.verdict(state, ip) }
+        .stateIn(scope, SharingStarted.Eagerly, PortState.Off)
+    @Volatile private var boundPort = 0
     private val generation get() = connection.generation
     private val activeTransfers = ConcurrentHashMap.newKeySet<String>()
     private val publicationJobs = ConcurrentHashMap<String, Job>()
@@ -220,6 +232,7 @@ class SoulseekRepository(
     fun logout(): Job = work {
         accountMutex.withLock {
             connection.disconnect(SoulseekDisconnectReason.MANUAL)
+            boundPort = 0; ports.close(); publicIp.value = null
             clearSessionWork("Signed out. Sign in and resume to continue.", true)
             connection.disconnect(SoulseekDisconnectReason.MANUAL, clearAccount = true)
         }
@@ -663,6 +676,8 @@ class SoulseekRepository(
         val changed = wifi != onWifi
         onWifi = wifi
         connection.networkChanged(available, newNetwork)
+        // Another network is another router (or none): ask again, or let go on mobile data.
+        if ((changed || newNetwork) && boundPort > 0) ports.open(boundPort)
         if (changed) applyWifiRule()
     }
     /** Something waits on the native client's events: they are polled quickly while it does. */
@@ -691,6 +706,8 @@ class SoulseekRepository(
                 "connected" -> {
                     // First, so an error this branch raises below survives.
                     clearSessionError()
+                    boundPort = event.optInt("listenPort")
+                    if (boundPort > 0) ports.open(boundPort)
                     observeOwner(owner)
                     _sharedFolder.value = preferences.sharedFolder(owner)?.let(Uri::parse)
                     _totals.value = preferences.totals(owner)
@@ -709,8 +726,12 @@ class SoulseekRepository(
                     if (preferences.sharing(owner) && preferences.sharedFolder(owner) != null) setSharing(true)
                     recoverPending()
                 }
-                "error", "disconnected", "paused" -> clearSessionWork(event.optString("reason", "Connection interrupted. Reconnect and resume."), false)
+                "error", "disconnected", "paused" -> {
+                    boundPort = 0; ports.close(); publicIp.value = null
+                    clearSessionWork(event.optString("reason", "Connection interrupted. Reconnect and resume."), false)
+                }
             }
+            "address" -> publicIp.value = event.optString("publicIp").takeIf { it.isNotBlank() }
             "search_result", "search_batch" -> {
                 repairSearches[event.optString("id")]?.let { search ->
                     val files = event.optJSONArray("files") ?: JSONArray().put(event)
@@ -752,7 +773,7 @@ class SoulseekRepository(
                         .groupBy { it.directory }
                         .map { (dir, tracks) -> ShelfFolder(dir, tracks.sortedBy { it.fileName.lowercase(java.util.Locale.ROOT) }) }
                         .sortedBy { it.directory.lowercase(java.util.Locale.ROOT) }
-                    if (_shelf.value?.requestId == event.optString("id")) _shelf.value = SoulseekShelf(event.optString("id"), requested.username, folders, loading = false)
+                    if (_shelf.value?.requestId == event.optString("id")) _shelf.value = SoulseekShelf(event.optString("id"), requested.username, folders, loading = false, total = event.optInt("total", -1))
                     return
                 }
                 val valid = (0 until files.length()).map { parseResult(files.getJSONObject(it), requested.username) }
@@ -838,7 +859,7 @@ class SoulseekRepository(
                 if (event.optString("operation") == "message" && id.isNotBlank()) dao.messageState(id, "FAILED")
                 if (id == searchId) { _searching.value = false; _searchStatus.update { it.copy(phase = SearchPhase.FAILED, error = message) } }
                 if (id == folderPreview.value?.requestId) _folderPreview.update { it?.copy(loading = false, error = message) }
-                if (id == _shelf.value?.requestId) { _shelf.update { it?.copy(loading = false, error = message) }; pendingBrowse.remove(id); return }
+                if (id == _shelf.value?.requestId) { _shelf.update { it?.copy(loading = false, error = message, reason = event.optString("reasonCode").ifBlank { null }) }; pendingBrowse.remove(id); return }
                 pendingBrowse.remove(id); _error.value = message
             }
         }
