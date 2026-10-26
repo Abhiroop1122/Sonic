@@ -1,0 +1,9 @@
+- Dig hears far more of Soulseek and asks for FLAC only.
+- When Soulseek hides a name, Dig searches around it.
+- Browse a friend's shelf and take what you like.
+- Sharing works with long file names; stuck uploads let go.
+- Your uploads and downloads, totalled in Settings.
+- Sonic asks once whether to share your downloads.
+- What's new after each update.
+- Friday Drops from the whole pool.
+- No gap above the keyboard in chats.

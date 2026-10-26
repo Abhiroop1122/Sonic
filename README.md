@@ -80,12 +80,14 @@ pages wait until you turn it back.
 ### Collect
 
 - **Dig** searches Soulseek for whole album folders, FLAC only, and ranks them by how well they
-  match. Open a folder to see its track list before you take anything. If you already own part of
-  an album, Dig fetches only what's missing.
+  match. It hears everyone who answers, and when Soulseek quietly blocks a name it searches around
+  the block. Open a folder to see its track list before you take anything. If you already own part
+  of an album, Dig fetches only what's missing.
 - **Friday Drops** brings ten Creative Commons albums from the Internet Archive every week, the
   same ten for everyone. Listen to thirty seconds of any track and claim three a week.
-- **Friends** is chat with other Soulseek listeners. Send a record as a card; a tap on it opens
-  the sender's folder in Dig.
+- **Friends** is chat with other Soulseek listeners. Browse a friend's shelf, every FLAC folder
+  they share, and take what you like. Send a record as a card; a tap on it opens the sender's
+  folder in Dig.
 - **Downloads** mend themselves where they can. A song that failed is asked for again, or fetched
   from someone else who has the identical file. A record missing a track wears a red tab until
   it's whole.
@@ -225,7 +227,8 @@ release/     release notes, checksums, verification reports
 
 | Version | | |
 | :--- | :--- | :--- |
-| **[1.2.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.2.0)** | **Current** | The neon deck, vinyl only, the Bluetooth codec, covers that stay. |
+| **[1.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.3.0)** | **Current** | Dig hears the whole network, friends' shelves, sharing that works, what's new. |
+| [1.2.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.2.0) | Release | The neon deck, vinyl only, the Bluetooth codec, covers that stay. |
 | [1.1.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.1.0) | Release | The track wheel picker, update checks with stable and development builds, a clearer signal chain. |
 | [1.0.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.0.0) | Release | Sonic. Themes, three decks, Storage, swaps by hand. |
 | [0.6.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.6.0-dev.1) | Development | The RG-1 3D turntable, rendered with Filament. |

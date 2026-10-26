@@ -5,6 +5,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.3.0 (2026-10-26)
+
+Dig finds what's out there, friends' shelves open, and sharing works.
+
+- **Dig hears everyone who answers.** A popular search draws thousands of replies through Soulseek's relay. Sonic held each of those connections for minutes and turned most of them away: a Daft Punk search heard 79 people where 2,300 answered. A connection that only brought search results now closes two seconds after them, so Dig hears far more of the network.
+- **Searches ask for FLAC.** Every search carries the word "flac", so people send their FLAC files and not the MP3s that used to fill the space. Punctuation is left out, as some clients answer nothing when it's there. Dig keeps up to 15,000 files instead of 5,000.
+- **Hidden blocks.** Soulseek silently drops searches for some names (anything with both "frank" and "ocean" reaches no one). When no one answers at all, Dig searches again with one word left out at a time, keeps only folders that match every word, and says so. Frank Ocean's *Blonde* now turns up hundreds of times.
+- **Friends' shelves.** Open a friend's chat and tap "their shelf" to see every FLAC folder they share; a folder opens with its tracks and the download key.
+- **Sharing:**
+  - Sharing a folder no longer stops at a long file name. A name over 120 characters lost its ".flac", and the whole folder was refused ("Only FLAC files may be shared"). Long names are now shortened before the extension; any file that still fails a check is left out, not the folder. Downloads with long names keep their ".flac" too.
+  - An upload to someone Sonic couldn't reach held its slot for the rest of the session; two of them stopped uploads altogether. It now lets go after 30 seconds.
+  - After your first Soulseek album, Sonic asks once whether to share your download folder (FLAC only, Wi-Fi only). People who share nothing get treated as leechers; nothing is shared without a yes.
+  - Settings › Soulseek shows what you've uploaded to others and downloaded, in size and files.
+- **Refusals keep their reason.** When someone turns a download down, Sonic keeps their reason. A full queue ("Too many files") is asked again later; a ban or a file they no longer share goes looking for another copy.
+- **What's new.** The first time Sonic opens after an update, it shows that version's notes; Settings › About shows them again.
+- **No gap above the keyboard.** Android moved the whole window for the keyboard while the page made room for it too, so a chat's message box floated a keyboard's height above the keys. The window now stays put.
+- **Friday Drops** draw on the whole Creative Commons FLAC pool from the week of 30 October: everything published before that Friday, about 12,600 albums, picked without regard to popularity. An empty answer from the archive is no longer kept as a week without albums.
+
+---
+
 ## 1.2.0 (2026-10-25)
 
 A neon deck for the dark room, the codec your headphones use, and covers that stay.
