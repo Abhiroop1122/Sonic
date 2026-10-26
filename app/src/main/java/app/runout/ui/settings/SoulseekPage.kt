@@ -195,7 +195,7 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
             }
             TransferTotalsBlock(state.soulseekTotals)
         }
-        PageSection("04 connection") {
+        PageSection("04 in the background") {
             HelpToggle(
                 "Stay online in the background",
                 "Keeps private messages and sharing available with an ongoing notification you can disconnect from.",
@@ -203,7 +203,6 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
                 enabled = session.hasAccount && (state.soulseekBackgroundConsent || session.connected),
             ) { help = HelpBackground }
             if (state.soulseekBackgroundConsent && !state.soulseekStayOnline) BasicText("background mode is paused. check notification permission and reconnect to resume.", style = Room.LabelQuiet.copy(lineHeight = 15.sp))
-            if (session.connected) ReachabilityLine(state.soulseekReachability)
         }
         // The one warning on the page: amber, a bold "!", and its "?".
         Row(Modifier.fillMaxWidth().background(Room.Warning).padding(11.dp), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -290,5 +289,52 @@ private fun ReachabilityLine(port: app.runout.soulseek.PortState) {
                 modifier = Modifier.padding(start = 19.dp).testTag("port-forward-hint"),
             )
         }
+    }
+}
+
+/** The Settings list's line for Connection: whether others can reach this phone, in a few words. */
+internal fun connectionSummary(state: RoomState): String {
+    if (!state.soulseekSession.connected) return if (state.soulseekSession.hasAccount) "offline" else "not signed in"
+    return when (val p = state.soulseekReachability) {
+        is app.runout.soulseek.PortState.Open -> "reachable · port ${p.port}"
+        is app.runout.soulseek.PortState.Closed -> "not reachable" + (if (p.port > 0) " · port ${p.port}" else "")
+        is app.runout.soulseek.PortState.BehindCgnat -> "blocked by your provider"
+        app.runout.soulseek.PortState.MobileData -> "mobile data · not reachable"
+        app.runout.soulseek.PortState.Mapping -> "checking…"
+        app.runout.soulseek.PortState.Off -> "no network"
+    }
+}
+
+/**
+ * Settings › Connection: 01 whether others can reach you (and how to fix it when not), 02 what that
+ * changes, and 03 what mobile data means for it.
+ */
+@Composable
+internal fun ConnectionPage(state: RoomState) {
+    PageSection("01 can others reach you") {
+        if (state.soulseekSession.connected) ReachabilityLine(state.soulseekReachability)
+        else Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("reachability"), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.Top) {
+            Box(Modifier.padding(top = 4.dp).size(8.dp).background(Room.Quiet))
+            BasicText(
+                if (state.soulseekSession.hasAccount) "connect to soulseek to check whether others can reach you." else "sign in to soulseek to check whether others can reach you.",
+                style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.weight(1f),
+            )
+        }
+    }
+    PageSection("02 why it matters") {
+        BasicText(
+            "to browse a shelf or download, one of the two phones has to let the other in. " +
+                "when yours can be reached, people whose router is closed can still get your files, and you theirs. " +
+                "when neither can, nothing goes through. sonic asks your router to open its port on its own (upnp or nat-pmp).",
+            style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
+        )
+    }
+    PageSection("03 on mobile data") {
+        BasicText(
+            "carriers put every phone behind their own router, so on mobile data no one can reach you, and sonic can't change that. " +
+                "you can still browse and download from anyone whose port is open, a phone at home with its port open included. " +
+                "sharing waits for wi-fi when \"share on wi-fi only\" is on.",
+            style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.testTag("mobile-data-note"),
+        )
     }
 }

@@ -107,7 +107,7 @@ import kotlin.math.roundToInt
 
 /** The sections of the Settings sheet. */
 enum class SettingsSection(val label: String) {
-    SOUND("Sound"), FLAGS("Flags"), LIBRARY("Library"), ACCOUNT("Soulseek"), ABOUT("About"),
+    SOUND("Sound"), FLAGS("Flags"), LIBRARY("Library"), ACCOUNT("Soulseek"), CONNECTION("Connection"), ABOUT("About"),
     /** Not in the list: two fingers swiped up or down on Settings open it. */
     STORAGE("Storage"),
 }
@@ -230,6 +230,7 @@ private fun SettingsPage(
                 ConnectionNotice(state, actions, onSetup)
                 SoulseekAccountPanel(state, actions, onOffline, onSignIn = onSetup, onDownloads = onDownloads)
             }
+            SettingsSection.CONNECTION -> ConnectionPage(state)
             SettingsSection.LIBRARY -> LibraryPage(state, actions)
             SettingsSection.FLAGS -> FlagsPage(state, actions)
             SettingsSection.ABOUT -> AboutPage(state, actions)
@@ -249,6 +250,7 @@ private fun summary(s: SettingsSection, state: RoomState): String = when (s) {
     }
     SettingsSection.ACCOUNT ->
         if (state.soulseekSession.hasAccount) "${state.soulseekSession.username} · ${connectionLabel(state.soulseekSession)}".lowercase() else "not signed in"
+    SettingsSection.CONNECTION -> connectionSummary(state)
     SettingsSection.LIBRARY -> "${recordCount(state.albums.size)} · ${if (state.hasFolder) "1 folder" else "no folder"}"
     SettingsSection.FLAGS -> listOfNotNull(
         "auto-flip".takeIf { state.deckFlags.autoFlip }, "auto-play".takeIf { state.deckFlags.autoPlay }, "sleep".takeIf { state.deckFlags.sleepMode },

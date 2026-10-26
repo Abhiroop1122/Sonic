@@ -471,13 +471,31 @@ class ListeningRoomUiTest {
         portrait()
         val connected = SoulseekSession(SoulseekConnection.CONNECTED, "abhi", authenticated = true)
         var reach by mutableStateOf<app.runout.soulseek.PortState>(app.runout.soulseek.PortState.Closed("your router didn't open a port.", 45123, "192.168.1.20"))
-        compose.setContent { RoomScreen(state().copy(soulseekSession = connected, soulseekReachability = reach), RecordingActions(), initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.ACCOUNT) }
+        compose.setContent { RoomScreen(state().copy(soulseekSession = connected, soulseekReachability = reach), RecordingActions(), initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.CONNECTION) }
         compose.onNodeWithTag("port-forward-hint").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("tcp port 45123 to 192.168.1.20", substring = true).assertExists()
 
         reach = app.runout.soulseek.PortState.BehindCgnat(45123, "100.72.3.9", "203.0.113.7")
         compose.onNodeWithText("internet provider has its own router", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("port-forward-hint").assertDoesNotExist()
+    }
+
+    @Test
+    fun `connection has its own row, says the state in a few words, and asks for sign-in when offline`() {
+        portrait()
+        var s by mutableStateOf(state().copy(
+            soulseekSession = SoulseekSession(SoulseekConnection.CONNECTED, "abhi", authenticated = true),
+            soulseekReachability = app.runout.soulseek.PortState.Closed("no.", 37539, "192.168.1.18"),
+        ))
+        compose.setContent { RoomScreen(s, RecordingActions(), initialPanel = Panel.SETTINGS) }
+        compose.onNodeWithText("not reachable · port 37539").assertIsDisplayed()
+        s = s.copy(soulseekReachability = app.runout.soulseek.PortState.MobileData)
+        compose.onNodeWithText("mobile data · not reachable").assertIsDisplayed()
+        compose.onNodeWithTag("settings:CONNECTION").performClick()
+        compose.onNodeWithTag("mobile-data-note").performScrollTo().assertIsDisplayed()
+        s = s.copy(soulseekSession = SoulseekSession())
+        compose.onNodeWithText("sign in to soulseek to check", substring = true).assertIsDisplayed()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/settings_connection.png")
     }
 
     @Test
@@ -491,7 +509,7 @@ class ListeningRoomUiTest {
         compose.setContent { RoomScreen(state(), actions, initialPanel = Panel.SETTINGS) }
         val rows = compose.onAllNodes(SemanticsMatcher("a settings row") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("settings:") == true })
             .fetchSemanticsNodes().map { it.config[SemanticsProperties.TestTag] }
-        assertEquals(listOf("SOUND", "FLAGS", "LIBRARY", "ACCOUNT", "ABOUT").map { "settings:$it" }, rows)
+        assertEquals(listOf("SOUND", "FLAGS", "LIBRARY", "ACCOUNT", "CONNECTION", "ABOUT").map { "settings:$it" }, rows)
         compose.onNodeWithTag("settings:LIBRARY").performScrollTo().performClick()
         compose.onNodeWithText("02 download folder").assertExists()
         compose.onNodeWithTag("download-folder").performScrollTo().performClick()
@@ -812,7 +830,7 @@ class ListeningRoomUiTest {
         val s = state().copy(soulseekSession = SoulseekSession(SoulseekConnection.CONNECTED, "abhi", authenticated = true), soulseekShareConsent = false)
         compose.setContent { RoomScreen(s, actions, initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.ACCOUNT) }
         compose.onNodeWithText("03 sharing").assertExists()
-        compose.onNodeWithText("04 connection").assertExists()
+        compose.onNodeWithText("04 in the background").assertExists()
         compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().assertIsNotEnabled().performClick()
         compose.onNodeWithTag("upload-slots:3").performScrollTo().performClick()
         compose.onNodeWithTag("settings-turtle").performScrollTo().performClick()
