@@ -88,18 +88,18 @@ object Room {
     /** The interface face; see [TeType]. */
     val Dot: FontFamily get() = TeType.family
 
-    // The type scale of runout-te.pen: Array at two weights only, 400 and 700 (the dotted cut).
-    /** label / 10 / 400 */
-    val Label: TextStyle get() = TextStyle(fontFamily = Dot, fontSize = 10.sp, fontWeight = FontWeight.Normal, color = Ink)
+    // The type scale of runout-te.pen: Array at two weights, 400, and 700 (the dotted cut) only from 22 up.
+    /** label / 11 / 400: the smallest size anything is set in. */
+    val Label: TextStyle get() = TextStyle(fontFamily = Dot, fontSize = 11.sp, fontWeight = FontWeight.Normal, color = Ink)
     val LabelQuiet: TextStyle get() = Label.copy(color = Quiet)
     /** body / 12 / 400: row titles, keys, links. */
     val Text: TextStyle get() = Label.copy(fontSize = 12.sp)
-    /** 12 / 700: the side on the top bar. */
-    val Strong: TextStyle get() = Label.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    /** 12 / 400 in ink: the side on the top bar, a chat head. Hierarchy comes from size and colour, not weight. */
+    val Strong: TextStyle get() = Label.copy(fontSize = 12.sp)
     /** heading / 16 / 400: fields and headings. */
     val Heading: TextStyle get() = Label.copy(fontSize = 16.sp)
-    /** 18 / 700: the album under the crate. */
-    val Album: TextStyle get() = Label.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    /** 18 / 400: the album under the crate. */
+    val Album: TextStyle get() = Label.copy(fontSize = 18.sp)
     /** title / 22 / 700: panel and dialog titles. */
     val Title: TextStyle get() = Label.copy(fontSize = 22.sp, lineHeight = 25.sp, fontWeight = FontWeight.Bold)
     val Brand: TextStyle get() = Label.copy(fontWeight = FontWeight.Bold)

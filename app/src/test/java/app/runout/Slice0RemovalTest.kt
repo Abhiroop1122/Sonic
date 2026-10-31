@@ -41,7 +41,7 @@ class Slice0RemovalTest {
     @Test fun `received record is not removed until confirmed`() {
         val removed = open(Source.RECEIVED)
         assertEquals(emptyList<String>(), removed)
-        compose.onNodeWithText("REMOVE RECORD?").assertIsDisplayed()
+        compose.onNodeWithText("Remove record?").assertIsDisplayed()
         compose.onNodeWithText("“keep record” and its received audio will be deleted from this device.").assertIsDisplayed()
         compose.onNodeWithText("keep it").performClick()
         assertEquals(emptyList<String>(), removed)
@@ -53,17 +53,17 @@ class Slice0RemovalTest {
     @Test fun `pressed record is not removed until confirmed`() {
         val removed = open(Source.PRESSING)
         assertEquals(emptyList<String>(), removed)
-        compose.onNodeWithText("REMOVE RECORD?").assertIsDisplayed()
+        compose.onNodeWithText("Remove record?").assertIsDisplayed()
         compose.onNodeWithText("remove record").performClick()
         assertEquals(listOf("record"), removed)
     }
 
     @Test fun `Back dismisses removal without deleting received audio`() {
         val removed = open(Source.RECEIVED)
-        compose.onNodeWithText("REMOVE RECORD?").assertIsDisplayed()
+        compose.onNodeWithText("Remove record?").assertIsDisplayed()
         // The glass confirm lives in the room, so Back reaches it through the activity dispatcher.
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.onNodeWithText("REMOVE RECORD?").assertDoesNotExist()
+        compose.onNodeWithText("Remove record?").assertDoesNotExist()
         assertEquals(emptyList<String>(), removed)
     }
 }

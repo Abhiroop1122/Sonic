@@ -737,13 +737,13 @@ fun RoomScreen(
                         } else {
                             Box(Modifier.fillMaxWidth().weight(301f)) {
                                 crate(Modifier.fillMaxSize(), CrateGeometry.Portrait)
-                                if (roomHelps) Row(Modifier.align(Alignment.TopEnd).padding(top = 11.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (roomHelps) Row(Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                                     BasicText("how the crate works", style = Room.LabelQuiet)
                                     HelpKey(HELP_CRATE.title, Modifier) { roomHelp = HELP_CRATE }
                                 }
                             }
                             front?.let { AlbumCaption(it, portrait = true) }
-                            Box(Modifier.fillMaxWidth().weight(105f).padding(horizontal = 22.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxWidth().weight(105f).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
                                 TrackWheel(state, actions, rows = 4, help = { help(HELP_WHEEL, it) })
                             }
                         }
@@ -757,7 +757,7 @@ fun RoomScreen(
                         verticalArrangement = Arrangement.SpaceBetween,
                     ) {
                         turntable(Modifier.fillMaxWidth().weight(1f), Alignment.Center)
-                        Row(Modifier.fillMaxWidth().then(rise).then(chrome).padding(start = 22.dp, end = 22.dp, bottom = 16.dp)) {
+                        Row(Modifier.fillMaxWidth().then(rise).then(chrome).padding(start = 24.dp, end = 24.dp, bottom = 16.dp)) {
                             BasicText(bandCaption(state, landscape = true), style = Room.LabelQuiet, modifier = Modifier.weight(1f), maxLines = 1)
                         }
                     }
@@ -771,7 +771,7 @@ fun RoomScreen(
                             val wheelShare by animateFloatAsState(if (state.deck.album != null) 80f else 0.01f, tween(360), label = "wheel")
                             crate(Modifier.fillMaxWidth().weight(200f), CrateGeometry.Landscape)
                             front?.let { AlbumCaption(it, portrait = false) }
-                            Box(Modifier.fillMaxWidth().weight(wheelShare).padding(horizontal = 22.dp).clipToBounds(), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxWidth().weight(wheelShare).padding(horizontal = 24.dp).clipToBounds(), contentAlignment = Alignment.Center) {
                                 if (wheelShare > 40f) TrackWheel(state, actions, rows = 3)
                             }
                         }
@@ -1276,7 +1276,7 @@ fun RoomScreen(
             .align(if (portrait) Alignment.BottomCenter else Alignment.BottomEnd)
             .then(if (portrait) Modifier else Modifier.fillMaxWidth(LANDSCAPE_ROOM))
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(bottom = NAV_HEIGHT + 16.dp, start = 22.dp, end = 22.dp)
+            .padding(bottom = NAV_HEIGHT + 16.dp, start = 24.dp, end = 24.dp)
             .widthIn(max = 520.dp)
 
         // Platter occupied: the error toast for 4 s, with "eject →" (the put-back).
@@ -1331,7 +1331,7 @@ fun RoomScreen(
                 .align(if (portrait) Alignment.BottomCenter else Alignment.BottomEnd)
                 .then(if (portrait) Modifier else Modifier.fillMaxWidth(LANDSCAPE_ROOM))
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(bottom = NAV_HEIGHT, start = 22.dp, end = 22.dp)
+                .padding(bottom = NAV_HEIGHT, start = 24.dp, end = 24.dp)
                 .widthIn(max = 520.dp)
             else toastAt
             DownloadsAddedPop(added, addedAt, popAt.zIndex(21f).testTag("downloads-added")) { added = 0; panel = Panel.DOWNLOADS; pulledId = null }
@@ -1392,9 +1392,9 @@ private fun GlassConfirm(
     onDismiss: () -> Unit,
 ) {
     TeCard("confirm", onDismiss) {
-        BasicText(title.uppercase(), style = Room.Title)
+        BasicText(sentence(title), style = Room.Title)
         BasicText(detail, style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             TeButton(dismiss, onDismiss, Modifier.weight(1f), kind = KeyKind.OUTLINE)
             val tick = rememberTick()
             Box(
@@ -1402,7 +1402,7 @@ private fun GlassConfirm(
                     .weight(1f)
                     .background(Room.Danger)
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onConfirm() }
-                    .padding(horizontal = 22.dp, vertical = 16.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) { BasicText(confirm, style = Room.Text.copy(color = Color.White), maxLines = 1) }
         }
@@ -1416,9 +1416,9 @@ private fun GlassConfirm(
 @Composable
 private fun TeToast(text: String, lamp: Color, modifier: Modifier, action: (@Composable () -> Unit)? = null) {
     Row(
-        modifier.background(Room.Ink).padding(horizontal = 16.dp, vertical = 11.dp),
+        modifier.background(Room.Ink).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(8.dp).background(lamp))
         BasicText(text, style = Room.Label.copy(color = Room.OnInk, lineHeight = 15.sp), modifier = Modifier.weight(1f))
@@ -1456,7 +1456,7 @@ private fun DownloadsAddedPop(count: Int, stamp: Long, modifier: Modifier, onVie
             .heightIn(min = 48.dp)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Canvas(Modifier.size(16.dp)) { drawDownloadGlyph(Room.Signal) }
         BasicText(
@@ -1509,16 +1509,16 @@ private fun PanelSheet(
             .hairlineTop(Room.Ink, 2.dp)
             // Taps inside the panel stay inside it (without turning it into one button for TalkBack).
             .then(if (catchTaps) Modifier.pointerInput(Unit) { detectTapGestures { } } else Modifier)
-            .padding(start = 22.dp, end = 22.dp, top = 22.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            BasicText(title.uppercase(), style = Room.Title, modifier = Modifier.weight(1f).testTag("panel-title"))
+            BasicText(sentence(title), style = Room.Title, modifier = Modifier.weight(1f).testTag("panel-title"))
             HeadKey(onClose, onBack)
         }
         // The panel keeps its size; its contents shrink above the keyboard.
         val body = Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.ime)
-        Column(if (scroll) body.verticalScroll(rememberScrollState()).padding(bottom = 33.dp) else body, content = content)
+        Column(if (scroll) body.verticalScroll(rememberScrollState()).padding(bottom = 32.dp) else body, content = content)
     }
 }
 
@@ -1541,10 +1541,10 @@ private fun FullPage(title: String, onClose: () -> Unit, sheets: PageSheetHost, 
             TeScreenHead(title, onClose, onBack = onBack)
             val body = Modifier.fillMaxWidth().weight(1f)
             // With the keyboard up the body sits right on it: no foot margin between a text box and the keys.
-            val foot = if (WindowInsets.isImeVisible) 0.dp else 22.dp
+            val foot = if (WindowInsets.isImeVisible) 0.dp else 24.dp
             CompositionLocalProvider(LocalPageSheetHost provides sheets) {
                 Column(
-                    (if (scroll) body.verticalScroll(rememberScrollState()) else body).padding(start = 22.dp, end = 22.dp, top = 11.dp, bottom = foot),
+                    (if (scroll) body.verticalScroll(rememberScrollState()) else body).padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = foot),
                     content = content,
                 )
             }
@@ -1575,13 +1575,13 @@ private fun TiltHint(modifier: Modifier, onDone: () -> Unit) {
     Box(modifier, contentAlignment = Alignment.BottomCenter) {
         Row(
             Modifier
-                .padding(bottom = 16.dp, start = 22.dp, end = 22.dp)
+                .padding(bottom = 16.dp, start = 24.dp, end = 24.dp)
                 .graphicsLayer { alpha = shown.value; translationY = (1f - shown.value) * 12.dp.toPx() }
                 .background(Room.Ink)
-                .padding(horizontal = 16.dp, vertical = 11.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .testTag("tilt-hint"),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(11.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Canvas(Modifier.size(28.dp)) { drawTwoFingerSwipe(Room.OnInk, demo) }
             BasicText(
@@ -1604,7 +1604,7 @@ internal const val LANDSCAPE_ROOM = 0.4625f
 private const val VINYL_ONLY_PEEK_MS = 10_000L
 
 /** The nav bar's height: 11 + 20 icon + 8 + a 10 sp line + 11. */
-internal val NAV_HEIGHT = 62.dp
+internal val NAV_HEIGHT = 64.dp
 
 /** A new Friday Drop, an unread message or a newer release of Sonic: an orange square on that place's cell. */
 internal fun navBadges(state: RoomState): Set<Panel> = buildSet {
@@ -1632,7 +1632,7 @@ private fun TopBar(state: RoomState, onDownloads: () -> Unit, onAccount: () -> U
         null -> null
     }
     Row(
-        Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 11.dp),
+        Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.weight(1f).testTag("side-indicator").semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1726,7 +1726,7 @@ private fun DeckBand(
 ) {
     Column(Modifier.fillMaxWidth().padding(bottom = if (empty) 0.dp else 16.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(412f / 240f).graphicsLayer { alpha = deckAlpha() }) { deck(Modifier.fillMaxSize()) }
-        Row(Modifier.fillMaxWidth().then(chrome).padding(start = 22.dp, end = 22.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().then(chrome).padding(start = 24.dp, end = 24.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             help(Modifier)
             Spacer(Modifier.weight(1f))
             if (!empty) BasicText("33⅓ rpm", style = Room.LabelQuiet)
@@ -1751,11 +1751,11 @@ private fun bandCaption(state: RoomState, landscape: Boolean): String {
 private fun AlbumCaption(album: Album, portrait: Boolean) {
     Column(
         // Pulled up towards the crate's floor, over the end of the reflection.
-        Modifier.fillMaxWidth().offset(y = if (portrait) (-12).dp else 0.dp).padding(start = 22.dp, end = 22.dp),
+        Modifier.fillMaxWidth().offset(y = if (portrait) (-12).dp else 0.dp).padding(start = 24.dp, end = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(if (portrait) 6.dp else 4.dp),
+        verticalArrangement = Arrangement.spacedBy(if (portrait) 8.dp else 4.dp),
     ) {
-        BasicText(album.title.uppercase(), style = if (portrait) Room.Album else Room.Album.copy(fontSize = 16.sp), maxLines = 1)
+        BasicText(album.title.lowercase(), style = if (portrait) Room.Album else Room.Album.copy(fontSize = 16.sp), maxLines = 1)
         if (portrait) {
             BasicText(album.artist.lowercase(), style = Room.Label.copy(fontSize = 9.sp, color = Room.Body), maxLines = 1, modifier = Modifier.testTag("caption-artist"))
             SpecTag(album.quality.label)
@@ -1770,7 +1770,7 @@ private fun AlbumCaption(album: Album, portrait: Boolean) {
 /** No records yet: TE · Home · empty, the 33/700 title, a line and the key, low for the thumb. */
 @Composable
 private fun EmptyRoom(state: RoomState, actions: RoomActions, modifier: Modifier) {
-    Column(modifier.padding(horizontal = 22.dp, vertical = 33.dp), verticalArrangement = Arrangement.spacedBy(22.dp, Alignment.Bottom)) {
+    Column(modifier.padding(horizontal = 24.dp, vertical = 32.dp), verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.Bottom)) {
         BasicText(emptyTitle(state), style = Room.Display.copy(fontSize = 33.sp, lineHeight = 36.sp), modifier = Modifier.testTag("empty-title"))
         BasicText(emptyDetail(state), style = Room.Text.copy(color = Room.Body, lineHeight = 18.sp), modifier = Modifier.testTag("empty-detail"))
         if (state.scan !is ScanState.Scanning) TeButton(if (state.hasFolder) "choose another folder" else "choose folder", actions::pickFolder, Modifier.testTag("choose-folder"))
@@ -1843,12 +1843,12 @@ private fun TrackWheel(state: RoomState, actions: RoomActions, rows: Int, help: 
                     .padding(horizontal = 8.dp)
                     .testTag("track:${'A' + sideIndex}${i + 1}"),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(11.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 BasicText(
                     "${'a' + sideIndex}${i + 1}",
                     style = Room.Label.copy(color = if (playing) Room.Signal else if (underBar) ink else Room.Quiet),
-                    modifier = Modifier.width(22.dp),
+                    modifier = Modifier.width(24.dp),
                 )
                 BasicText(track.title.lowercase(), style = (if (underBar) Room.Text else Room.Label).copy(color = ink), maxLines = 1, modifier = Modifier.weight(1f))
                 if (underBar) {

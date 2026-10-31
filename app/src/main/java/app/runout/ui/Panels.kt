@@ -136,7 +136,7 @@ internal fun Modifier.fillPageHeight(): Modifier = composed {
     var top by remember { mutableIntStateOf(-1) }
     var rootHeight by remember { mutableIntStateOf(0) }
     val min = if (top < 0) 0.dp else with(density) {
-        (rootHeight - top - bottomInset - 22.dp.roundToPx()).coerceAtLeast(0).toDp()
+        (rootHeight - top - bottomInset - 24.dp.roundToPx()).coerceAtLeast(0).toDp()
     }
     this
         .onGloballyPositioned { c ->
@@ -185,7 +185,7 @@ internal fun HelpSquare(about: String, onClick: () -> Unit) {
 /** A numbered section of a page, "01 signal": the 10/400 grey label, then its parts 11 dp apart. */
 @Composable
 internal fun PageSection(label: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BasicText(label, style = Room.LabelQuiet)
         content()
     }
@@ -224,7 +224,7 @@ fun DropsPanel(
     val left = (DropsRepository.CLAIMS_PER_WEEK - claimed.size).coerceAtLeast(0)
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     var help by remember { mutableStateOf<TeHelp?>(null) }
-    Column(Modifier.fillMaxWidth().testTag("panel:drops"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("panel:drops"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         val ready = drops as? DropState.Ready
         val item = ready?.week?.items?.firstOrNull { it.identifier == open }
         if (item != null) {
@@ -232,7 +232,7 @@ fun DropsPanel(
             return@Column
         }
         if (!signedIn) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicText(
                     "sign in with soulseek to download from the internet archive. local flac playback is always available without an account.",
                     style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
@@ -242,13 +242,13 @@ fun DropsPanel(
         }
         when (drops) {
             DropState.Idle, DropState.Loading -> WaitingMark("digging through the archive…", "Loading drops")
-            is DropState.Failed -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+            is DropState.Failed -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicText(drops.reason.lowercase(), style = Room.Label.copy(color = Room.Danger, lineHeight = 15.sp))
                 TeButton("try again", actions::refreshDrops, kind = KeyKind.OUTLINE)
             }
             is DropState.Ready -> {
                 val w = drops.week
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         BasicText("week of ${w.opens.dayOfMonth} ${w.opens.month.name.lowercase()}", style = Room.LabelQuiet, modifier = Modifier.weight(1f))
                         ClaimLights(left) { help = CLAIMS_HELP }
@@ -265,7 +265,7 @@ fun DropsPanel(
             // The shelf: the ten drops as tiles, two to a row, 22 dp across and 16 dp down.
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ready.week.items.withIndex().chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         pair.forEach { (i, d) ->
                             DropSleeve(i + 1, d, d.identifier in claimed, claiming[d.identifier], canClaim = left > 0, actions, Modifier.weight(1f).fillMaxHeight()) { open = d.identifier }
                         }
@@ -296,10 +296,10 @@ internal fun WaitingMark(text: String, description: String, modifier: Modifier =
  */
 @Composable
 private fun ClaimLights(left: Int, onHelp: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             Modifier.semantics(mergeDescendants = true) { contentDescription = "$left of ${DropsRepository.CLAIMS_PER_WEEK} claims left" }.testTag("claim-lights"),
-            horizontalArrangement = Arrangement.spacedBy(11.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BasicText(if (left == 1) "1 claim left" else "$left claims left", style = Room.Label.copy(color = Room.Signal))
@@ -333,11 +333,11 @@ private fun DropSleeve(number: Int, item: DropItem, isClaimed: Boolean, progress
             .background(Room.Background)
             .border(2.dp, Room.Ink)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // 140 of the tile's 151 dp on the 412 dp board, square.
         DropCover(number, item, cover, Modifier.fillMaxWidth(140f / 151f).aspectRatio(1f).align(Alignment.CenterHorizontally)) {
-            if (progress != null) ProgressLine(progress, Modifier.align(Alignment.BottomCenter).padding(6.dp))
+            if (progress != null) ProgressLine(progress, Modifier.align(Alignment.BottomCenter).padding(8.dp))
         }
         Row(Modifier.fillMaxWidth()) {
             BasicText("%02d".format(number), style = Room.LabelQuiet, modifier = Modifier.weight(1f))
@@ -370,19 +370,19 @@ private fun DropPreview(number: Int, item: DropItem, isClaimed: Boolean, progres
     var loaded by remember(item.identifier) { mutableStateOf(false) }
     val tracks by produceState<List<app.runout.drops.DropTrack>?>(null, item.identifier) { value = actions.dropTracks(item); loaded = true }
     val noFlac = loaded && tracks?.isEmpty() == true
-    Column(Modifier.fillMaxWidth().testTag("drop-preview"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("drop-preview"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         PageBackLink("← all drops", "drops-back") { actions.listen(null); onBack() }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             DropCover(number, item, cover, Modifier.size(132.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                BasicText(item.title.uppercase(), style = Room.Heading.copy(fontWeight = FontWeight.Bold, lineHeight = 19.sp), maxLines = 4, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                BasicText(item.title.lowercase(), style = Room.Heading.copy(lineHeight = 19.sp), maxLines = 4, overflow = TextOverflow.Ellipsis)
                 listOfNotNull(item.creator, item.year?.toString()).joinToString(" · ").takeIf { it.isNotEmpty() }?.let {
                     BasicText(it.lowercase(), style = Room.Label.copy(color = Room.Body))
                 }
                 Licences.label(item.license)?.let { TeTag(it.lowercase(), color = Room.Accent) }
                 when {
                     isClaimed -> BasicText("in your crate", style = Room.Label.copy(color = Room.Online))
-                    progress != null -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    progress != null -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         BasicText("claiming · ${(progress * 100).roundToInt()}%", style = Room.Label.copy(color = Room.Signal))
                         ProgressLine(progress)
                     }
@@ -429,16 +429,16 @@ private fun DropPreview(number: Int, item: DropItem, isClaimed: Boolean, progres
                                 tick()
                                 actions.listen(if (on) null else t.url)
                             }
-                            .padding(vertical = 11.dp),
+                            .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(11.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         BasicText((i + 1).toString().padStart(2, '0'), style = Room.LabelQuiet)
                         BasicText(t.title.lowercase(), style = Room.Label.copy(color = if (on) Room.Signal else Room.Ink), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         // Lucide play; the dotted vinyl turning while the start of the track loads;
                         // an orange stop square once it plays.
                         if (phase == PreviewPhase.BUFFERING) DotVinylSpinner(Modifier.size(18.dp), description = "Loading preview")
-                        else Canvas(Modifier.size(12.dp)) {
+                        else Canvas(Modifier.size(16.dp)) {
                             val w = size.width
                             val line = 1.dp.toPx()
                             if (on) drawRect(Room.Signal, Offset(line / 2, line / 2), Size(w - line, w - line), style = Stroke(line))
@@ -463,8 +463,8 @@ private fun DropCover(number: Int, item: DropItem, cover: ImageBitmap?, modifier
     )
     Box(modifier.background(Room.Surface)) {
         if (shown < 1f) Box(Modifier.fillMaxSize().testTag("drop-placeholder:${item.identifier}")) {
-            DotVinyl(Modifier.fillMaxSize().padding(11.dp))
-            BasicText("%02d".format(number), style = Room.Label, modifier = Modifier.align(Alignment.TopStart).padding(6.dp))
+            DotVinyl(Modifier.fillMaxSize().padding(12.dp))
+            BasicText("%02d".format(number), style = Room.Label, modifier = Modifier.align(Alignment.TopStart).padding(8.dp))
         }
         cover?.let { Image(it, item.title, Modifier.fillMaxSize().alpha(shown), contentScale = ContentScale.Crop) }
         overlay()

@@ -49,15 +49,15 @@ internal fun StoragePage(state: RoomState, actions: RoomActions) {
     // The record whose delete key was pressed, waiting on the warning.
     var confirm by remember { mutableStateOf<RecordUsage?>(null) }
     LaunchedEffect(Unit) { if (state.storage !is StorageState.Measuring) actions.analyzeStorage() }
-    Column(Modifier.fillMaxWidth().testTag("panel:storage"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("panel:storage"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         // The way back, as the way in: two fingers, this time down.
-        Row(Modifier.fillMaxWidth().testTag("storage-back-hint"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(Modifier.fillMaxWidth().testTag("storage-back-hint"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             androidx.compose.foundation.Canvas(Modifier.size(20.dp)) { drawTwoFingerSwipe(Room.Quiet) }
             BasicText("swipe down with two fingers to go back to settings", style = Room.LabelQuiet.copy(lineHeight = 15.sp))
         }
         when (val s = state.storage) {
             is StorageState.Done -> Report(s.report, actions) { confirm = it }
-            is StorageState.Measuring -> Column(Modifier.fillMaxWidth().padding(vertical = 33.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            is StorageState.Measuring -> Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 DotVinylSpinner(Modifier.size(96.dp), description = "Measuring your folders")
                 BasicText(if (s.files == 0) "measuring your folders…" else "measuring… ${"%,d".format(s.files)} files", style = Room.LabelQuiet, modifier = Modifier.testTag("storage-measuring"))
             }
@@ -75,8 +75,8 @@ internal fun StoragePage(state: RoomState, actions: RoomActions) {
 private fun DeleteWarning(record: RecordUsage, onDelete: () -> Unit, onKeep: () -> Unit) {
     PageSheet("delete-warning", onKeep, inverted = true) {
         BasicText("delete record", style = Room.Label.copy(color = Room.InverseBody))
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            BasicText(record.title.uppercase(), style = Room.Title.copy(color = Room.OnInk), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BasicText(record.title.lowercase(), style = Room.Title.copy(color = Room.OnInk), maxLines = 2, overflow = TextOverflow.Ellipsis)
             record.artist?.let { BasicText(it.lowercase(), style = Room.Label.copy(color = Room.InverseBody)) }
         }
         BasicText("your album will be deleted.", style = Room.Strong.copy(color = Room.InverseDanger), modifier = Modifier.testTag("delete-warning-line"))
@@ -84,7 +84,7 @@ private fun DeleteWarning(record: RecordUsage, onDelete: () -> Unit, onKeep: () 
             "its folder and every file in it (${bytes(record.bytes)}) are removed from your phone, not just from sonic. this can't be undone.",
             style = Room.Label.copy(color = Room.InverseBody, lineHeight = 15.sp),
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SheetKey("keep it", Room.OnInk, Room.Ink, Modifier.weight(1f).testTag("delete-keep"), outline = true, onClick = onKeep)
             SheetKey("delete", Color.White, Room.InverseDanger, Modifier.weight(1f).testTag("delete-confirm"), onClick = onDelete)
         }
@@ -122,7 +122,7 @@ private fun Report(r: StorageReport, actions: RoomActions, onDelete: (RecordUsag
     PageSection("04 sonic") {
         StatsStrip(listOf(bytes(r.app.covers) to "covers", bytes(r.app.cache) to "cache", bytes(r.app.data) to "data"))
         Quiet("covers are the sleeves sonic has kept; data is its library list, chats and settings. the cache is safe to clear.")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             TeButton("clear cache", actions::clearCache, Modifier.weight(1f).testTag("storage-clear-cache"), kind = KeyKind.OUTLINE, enabled = r.app.cache > 0)
             TeButton("measure again", actions::analyzeStorage, Modifier.weight(1f).testTag("storage-again"), kind = KeyKind.OUTLINE)
         }
@@ -137,7 +137,7 @@ private fun Report(r: StorageReport, actions: RoomActions, onDelete: (RecordUsag
 private fun Folder(f: FolderUsage, tag: String, onDelete: (RecordUsage) -> Unit) {
     var all by remember(f.label) { mutableStateOf(false) }
     if (f.error != null) { BasicText(f.error, style = Room.Label.copy(color = Room.Danger, lineHeight = 15.sp)); return }
-    Column(Modifier.fillMaxWidth().testTag(tag), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(Modifier.fillMaxWidth().testTag(tag), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         StatsStrip(listOf(bytes(f.bytes) to "size", "%,d".format(f.files) to "files", "${f.albums}" to "records"))
         val kinds = StorageKind.entries.mapNotNull { k -> f.byKind[k]?.takeIf { it > 0 }?.let { k to it } }
         if (kinds.isNotEmpty()) {
@@ -145,13 +145,13 @@ private fun Folder(f: FolderUsage, tag: String, onDelete: (RecordUsage) -> Unit)
             kinds.forEach { (k, b) -> Legend(colourOf(k), k.label, b, f.bytes) }
         }
         if (f.largest.isNotEmpty()) {
-            BasicText("records, largest first", style = Room.LabelQuiet, modifier = Modifier.padding(top = 11.dp))
+            BasicText("records, largest first", style = Room.LabelQuiet, modifier = Modifier.padding(top = 12.dp))
             Column(Modifier.fillMaxWidth()) {
                 (if (all) f.largest else f.largest.take(SHOWN)).forEachIndexed { i, rec ->
                     Row(
-                        Modifier.fillMaxWidth().hairlineTop().padding(vertical = 11.dp),
+                        Modifier.fillMaxWidth().hairlineTop().padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(11.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         BasicText("%02d".format(i + 1), style = Room.LabelQuiet)
                         Column(Modifier.weight(1f)) {
@@ -198,14 +198,14 @@ private fun PhoneShare(d: app.runout.library.DeviceUsage, music: Long, downloads
             modifier = Modifier.testTag("storage-phone"),
         )
         UsageBar(listOf(music to Room.Signal, downloads to Room.Accent, others to Room.Quiet, d.free to Room.HairlineSoft))
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             listOfNotNull(
                 Room.Signal to "music",
                 (Room.Accent to "downloads").takeIf { downloads > 0 },
                 Room.Quiet to "everything else",
                 Room.HairlineSoft to "free",
             ).forEach { (c, label) ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(8.dp).background(c))
                     BasicText(label, style = Room.LabelQuiet)
                 }
@@ -241,7 +241,7 @@ private fun Legend(colour: Color, label: String, b: Long, of: Long) {
 private fun StatsStrip(items: List<Pair<String, String>>) {
     Row(Modifier.fillMaxWidth().hairlineTop(Room.Ink).hairlineBottom(Room.Ink)) {
         items.forEach { (value, label) ->
-            Column(Modifier.weight(1f).padding(vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(value, style = Room.Title.copy(lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified), maxLines = 1)
                 BasicText(label, style = Room.LabelQuiet)
             }
@@ -280,7 +280,7 @@ private fun TrashKey(title: String, onClick: () -> Unit) {
             .testTag("delete:$title"),
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.foundation.Canvas(Modifier.size(18.dp)) {
+        androidx.compose.foundation.Canvas(Modifier.size(16.dp)) {
             val k = size.width / 24f
             val st = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.8f * k, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
             val c = Room.Danger

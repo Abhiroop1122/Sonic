@@ -169,7 +169,7 @@ private fun SettingsHome(state: RoomState, actions: RoomActions, onSection: (Set
             // Two fingers up the page: the storage page, kept off the list.
             .twoFingerSwipe(up = true) { found(); onSection(SettingsSection.STORAGE) }
             .testTag("panel:settings"),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         (state.update as? UpdateState.Available)?.let { UpdateNotice(it.release, actions) }
         Column(Modifier.fillMaxWidth()) {
@@ -192,7 +192,7 @@ private fun StorageHint() {
     Row(
         Modifier.fillMaxWidth().testTag("storage-hint").semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Canvas(Modifier.size(20.dp)) { drawTwoFingerSwipe(Room.Quiet, lift) }
         BasicText("swipe up with two fingers to see what your music takes up", style = Room.LabelQuiet.copy(lineHeight = 15.sp))
@@ -221,7 +221,7 @@ private fun SettingsPage(
             // Storage came up with two fingers; two fingers down take it away again.
             .then(if (section == SettingsSection.STORAGE) Modifier.twoFingerSwipe(up = false) { back(); onSection(null) } else Modifier)
             .testTag("panel:settings"),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         PageBackLink("← settings", "settings-back") { onSection(null) }
         when (section) {
@@ -282,14 +282,14 @@ private fun LibraryPage(state: RoomState, actions: RoomActions) {
     var help by remember { mutableStateOf<TeHelp?>(null) }
     PageSection("01 music folder") {
         BasicText(
-            if (state.hasFolder) "each album folder is a record in the crate." else "no music folder yet. each album folder in it becomes a record in the crate.",
+            if (state.hasFolder) "each album folder is a record in the crate" else "no music folder yet. each album folder in it becomes a record in the crate.",
             style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
         )
         state.report?.let { r ->
             if (r.error != null) BasicText(r.summary.lowercase(), style = Room.Label.copy(color = Room.Danger, lineHeight = 15.sp))
             else LibraryStats(r.albums, r.audioFiles, r.folders, r.unreadable)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             // Change folder lives here now, not on the home screen.
             if (state.hasFolder) {
                 TeButton("change folder", actions::pickFolder, Modifier.weight(1f).testTag("settings-change-folder"), kind = KeyKind.OUTLINE)
@@ -328,7 +328,7 @@ private fun LibraryPage(state: RoomState, actions: RoomActions) {
 private fun ShareSwapNote(shared: String?, actions: RoomActions) {
     Column(
         Modifier.fillMaxWidth().background(Room.Surface).padding(16.dp).testTag("share-swap"),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(8.dp).background(Room.Signal))
@@ -354,7 +354,7 @@ private fun LibraryStats(albums: Int, files: Int, folders: Int, unreadable: Int)
             Triple("$folders", "folders", Room.Ink),
             Triple("$unreadable", "unreadable", if (unreadable > 0) Room.Danger else Room.Ink),
         ).forEach { (value, label, colour) ->
-            Column(Modifier.weight(1f).padding(vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(value, style = Room.Title.copy(color = colour, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified))
                 BasicText(label, style = Room.LabelQuiet)
             }
@@ -389,15 +389,15 @@ private fun RepairLibrary(state: RoomState, actions: RoomActions) {
             BasicText(
                 "$total ${if (total == 1) "file" else "files"} couldn't be read",
                 style = Room.Label.copy(color = Color.White),
-                modifier = Modifier.fillMaxWidth().background(Room.Danger).padding(11.dp),
+                modifier = Modifier.fillMaxWidth().background(Room.Danger).padding(12.dp),
             )
             broken.take(SHOWN_BROKEN).forEach { f ->
-                Column(Modifier.fillMaxWidth().hairlineTop().padding(11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.fillMaxWidth().hairlineTop().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     BasicText(f.path.lowercase(), style = Room.Label.copy(lineHeight = 15.sp), maxLines = 2)
                     BasicText(f.reason.lowercase(), style = Room.LabelQuiet.copy(lineHeight = 15.sp))
                 }
             }
-            if (total > SHOWN_BROKEN) BasicText("and ${total - SHOWN_BROKEN} more", style = Room.LabelQuiet, modifier = Modifier.fillMaxWidth().hairlineTop().padding(11.dp))
+            if (total > SHOWN_BROKEN) BasicText("and ${total - SHOWN_BROKEN} more", style = Room.LabelQuiet, modifier = Modifier.fillMaxWidth().hairlineTop().padding(12.dp))
         }
         BasicText(
             "to fix one: re-download or re-rip it as real flac, or check it with flac -t on a computer. then tap repair again.",
@@ -419,20 +419,20 @@ private fun androidx.compose.foundation.layout.ColumnScope.AboutPage(state: Room
         "inter and silkscreen: sil open font license."
     Column(Modifier.fillMaxWidth()) {
         listOf(
-            "records" to "your flac records play offline, with no account.",
+            "records" to "your flac records play offline, with no account",
             "soulseek" to "optional. finds and downloads flac and carries private messages. its protocol does not encrypt sign-in or messages.",
             "drops" to "friday drops come from the internet archive under their own licences.",
             "fonts" to fonts,
             "libraries" to "backdrop, filament, media3, androidx: apache 2.0. soulseek core: mit.",
         ).forEach { (key, value) ->
-            Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 11.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 BasicText(key, style = Room.LabelQuiet, modifier = Modifier.width(88.dp))
                 BasicText(value, style = Room.Label.copy(lineHeight = 15.sp), modifier = Modifier.weight(1f))
             }
         }
         // Who made it: "0xs0m" in blue opens somm.tf in the browser.
         val context = LocalContext.current
-        Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 11.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             BasicText("credits", style = Room.LabelQuiet, modifier = Modifier.width(88.dp))
             Row(Modifier.weight(1f)) {
                 BasicText("fuze2k and ", style = Room.Label.copy(lineHeight = 15.sp))
@@ -446,7 +446,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AboutPage(state: Room
             }
         }
     }
-    Column(Modifier.fillMaxWidth().hairlineTop(Room.Ink).padding(top = 11.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(Modifier.fillMaxWidth().hairlineTop(Room.Ink).padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BrandText(brandMark() + androidx.compose.ui.text.AnnotatedString(" $VERSION"), Room.Display.copy(fontSize = 33.sp))
         BasicText(if (BuildConfig.DEBUG) "development build · rg-1 v3" else "rg-1 v3", style = Room.LabelQuiet)
         UpdateLine(state, actions)
@@ -458,8 +458,8 @@ private fun androidx.compose.foundation.layout.ColumnScope.AboutPage(state: Room
 @Composable
 private fun UpdateNotice(release: app.runout.update.Release, actions: RoomActions) {
     Row(
-        Modifier.fillMaxWidth().background(Room.Ink).padding(horizontal = 16.dp, vertical = 14.dp).testTag("settings-update"),
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        Modifier.fillMaxWidth().background(Room.Ink).padding(horizontal = 16.dp, vertical = 16.dp).testTag("settings-update"),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BasicText("sonic ${release.version} is out.", style = Room.Text.copy(color = Room.OnInk), modifier = Modifier.weight(1f))
@@ -475,7 +475,7 @@ private fun UpdateNotice(release: app.runout.update.Release, actions: RoomAction
 private fun UpdateLine(state: RoomState, actions: RoomActions) {
     val update = state.update
     var choosing by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().testTag("about-update"), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().testTag("about-update"), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         if (!BuildConfig.UPDATE_CHECK) {
             BasicText("updates come through f-droid.", style = Room.LabelQuiet, modifier = Modifier.weight(1f))
             return@Row
@@ -518,7 +518,7 @@ private fun UpdateChannelSheet(onDismiss: () -> Unit, onChoose: (app.runout.upda
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { onChoose(channel) }
                     .padding(16.dp)
                     .testTag("channel-choose:${channel.name}"),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 BasicText(channel.label, style = Room.Strong)
                 BasicText(line, style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp))
@@ -560,9 +560,9 @@ internal fun HelpToggle(
             .testTag(tag)
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(title.lowercase(), style = Room.Text)
                 if (onHelp != null) HelpSquare(title, onHelp)

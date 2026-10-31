@@ -215,12 +215,12 @@ fun RunoutIntro(onFinished: () -> Unit, modifier: Modifier = Modifier, deck: Dec
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + if (beside) WindowInsetsSides.End else WindowInsetsSides.Horizontal))
-                .padding(start = 22.dp + if (beside) besideStart else 0.dp, end = 22.dp, top = 44.dp, bottom = 33.dp),
+                .padding(start = 24.dp + if (beside) besideStart else 0.dp, end = 24.dp, top = 44.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Wordmark(66.sp, letters = letters, cursor = cursor, reserveCursor = true)
             BasicText("every record you own. one room to play them.", style = OnboardingBody, modifier = Modifier.fillMaxWidth().alpha(lineIn))
-            Row(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 BasicText("a record drops onto the platter", style = Room.LabelQuiet)
                 BasicText("tap to skip →", style = Room.Label)
             }

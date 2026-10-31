@@ -54,12 +54,25 @@ import androidx.compose.ui.unit.sp
  */
 
 /**
+ * A heading in sentence case: the first letter up, and the names and initialisms the copy writes in
+ * lowercase set as they're spelled ("how a soulseek id works" → "How a Soulseek ID works").
+ */
+internal fun sentence(text: String): String =
+    text.split(' ').joinToString(" ") { HEAD_NAMES[it.lowercase()] ?: it }.replaceFirstChar { it.uppercase() }
+
+private val HEAD_NAMES = mapOf(
+    "soulseek" to "Soulseek", "id" to "ID", "flac" to "FLAC", "eq" to "EQ", "upnp" to "UPnP", "nat-pmp" to "NAT-PMP",
+    "wi-fi" to "Wi-Fi", "sonic" to "Sonic", "autoeq" to "AutoEQ", "led" to "LED", "ldac" to "LDAC", "cgnat" to "CGNAT",
+    "replaygain" to "ReplayGain", "android" to "Android", "bluetooth" to "Bluetooth",
+)
+
+/**
  * TE Screen Head: 22 dp in (11 at the foot), "close ×" (or "← back") in 12/400 at the right, then
  * the title in 44/700, 11 dp apart.
  */
 @Composable
 fun TeScreenHead(title: String, onClose: (() -> Unit)?, modifier: Modifier = Modifier, onBack: () -> (() -> Unit)? = { null }) {
-    Column(modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 11.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             HeadKey(onClose, onBack)
         }
@@ -149,12 +162,12 @@ fun TeNavBar(active: Panel?, badges: Set<Panel>, onOpen: (Panel) -> Unit, modifi
                     .testTag("nav:ROOM")
                     .semantics(mergeDescendants = true) { contentDescription = "Room" }
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); last?.invoke() }
-                    .padding(vertical = 11.dp),
+                    .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Canvas(Modifier.size(20.dp)) { drawRoomIcon(Color.White) }
-                BasicText("room", style = Room.Label.copy(color = Color.White))
+                BasicText("room", style = Room.Label.copy(color = Color.White, lineHeight = 12.sp))
             }
         }
         // Sideways the room is for listening: the places wait until the phone is upright again.
@@ -172,7 +185,7 @@ fun TeNavBar(active: Panel?, badges: Set<Panel>, onOpen: (Panel) -> Unit, modifi
                     .testTag("nav:${p.name}")
                     .semantics(mergeDescendants = true) { contentDescription = p.nav + if (p in badges) ", new" else "" }
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onOpen(p) }
-                    .padding(vertical = 11.dp),
+                    .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -180,7 +193,7 @@ fun TeNavBar(active: Panel?, badges: Set<Panel>, onOpen: (Panel) -> Unit, modifi
                     Canvas(Modifier.size(20.dp)) { drawNavIcon(p, ink) }
                     if (p in badges) Box(Modifier.size(6.dp).align(Alignment.TopEnd).background(Room.Signal))
                 }
-                BasicText(p.nav.lowercase(), style = Room.Label.copy(color = ink))
+                BasicText(p.nav.lowercase(), style = Room.Label.copy(color = ink, lineHeight = 12.sp))
             }
         }
     }
@@ -213,9 +226,9 @@ fun UprightNote(modifier: Modifier = Modifier, large: Boolean = false) {
         Canvas(Modifier.size(44.dp)) { drawTurnUpright(Room.Ink) }
         BasicText(text, style = Room.Label.copy(color = Room.Body, textAlign = TextAlign.Center, lineHeight = 15.sp), modifier = Modifier.widthIn(max = 260.dp))
     } else Row(
-        modifier.testTag("landscape-note").semantics(mergeDescendants = true) {}.padding(horizontal = 16.dp, vertical = 11.dp),
+        modifier.testTag("landscape-note").semantics(mergeDescendants = true) {}.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Canvas(Modifier.size(20.dp)) { drawTurnUpright(Room.Ink) }
         BasicText(text, style = Room.Label.copy(color = Room.Body, lineHeight = 13.sp), maxLines = 2)
@@ -306,14 +319,14 @@ fun TeHelpPanel(title: String, points: List<String>, onClose: () -> Unit, modifi
             .background(Room.Background)
             .hairlineTop(Room.Ink, 2.dp)
             .testTag(tag)
-            .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 33.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             BasicText(label, style = Room.Label.copy(color = Room.Accent), modifier = Modifier.weight(1f))
             CloseKey(onClose)
         }
-        BasicText(title.uppercase(), style = Room.Title, modifier = Modifier.fillMaxWidth().semantics { heading() })
+        BasicText(sentence(title), style = Room.Title, modifier = Modifier.fillMaxWidth().semantics { heading() })
         HelpPoints(points)
         TeButton("got it", onClose, Modifier.fillMaxWidth())
     }
@@ -324,7 +337,7 @@ fun TeHelpPanel(title: String, points: List<String>, onClose: () -> Unit, modifi
 fun TeStats(stats: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth().hairlineTop(Room.Ink).hairlineBottom(Room.Ink)) {
         stats.forEach { (value, label) ->
-            Column(Modifier.weight(1f).padding(vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(value, style = Room.Title)
                 BasicText(label, style = Room.LabelQuiet)
             }
@@ -345,7 +358,7 @@ fun TeHelpSheet(help: TeHelp?, onClose: () -> Unit) {
             BasicText(help.label, style = Room.Label.copy(color = Room.Accent), modifier = Modifier.weight(1f))
             CloseKey(onClose)
         }
-        BasicText(help.title.uppercase(), style = Room.Title, modifier = Modifier.fillMaxWidth().semantics { heading() })
+        BasicText(sentence(help.title), style = Room.Title, modifier = Modifier.fillMaxWidth().semantics { heading() })
         HelpPoints(help.points)
         TeButton("got it", onClose, Modifier.fillMaxWidth())
     }
@@ -355,7 +368,7 @@ fun TeHelpSheet(help: TeHelp?, onClose: () -> Unit) {
 private fun HelpPoints(points: List<String>) {
     Column(Modifier.fillMaxWidth()) {
         points.forEachIndexed { i, text ->
-            Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 11.dp), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+            Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicText("%02d".format(i + 1), style = Room.LabelQuiet)
                 BasicText(text, style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.weight(1f))
             }
@@ -381,8 +394,8 @@ fun WhatsNewSheet(notes: app.runout.update.WhatsNew.Section?, onClose: () -> Uni
             var n = 0
             notes.items.forEach { item ->
                 Row(
-                    Modifier.fillMaxWidth().then(if (item.depth == 0) Modifier.hairlineTop() else Modifier).padding(start = if (item.depth == 0) 0.dp else 33.dp, top = 11.dp, bottom = if (item.depth == 0) 11.dp else 0.dp),
-                    horizontalArrangement = Arrangement.spacedBy(11.dp),
+                    Modifier.fillMaxWidth().then(if (item.depth == 0) Modifier.hairlineTop() else Modifier).padding(start = if (item.depth == 0) 0.dp else 32.dp, top = 12.dp, bottom = if (item.depth == 0) 12.dp else 0.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     BasicText(if (item.depth == 0) "%02d".format(++n) else "·", style = Room.LabelQuiet)
                     BasicText(markdownLine(item.text), style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.weight(1f))

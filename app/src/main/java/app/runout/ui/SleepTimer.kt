@@ -68,7 +68,7 @@ internal fun SleepMoon(left: Int?, onClick: () -> Unit) {
             .touchHeight()
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Canvas(Modifier.size(16.dp)) { drawDotMoon(if (left != null) Room.Signal else Room.Ink) }
         if (left != null) BasicText("$left", style = Room.Label.copy(color = Room.Signal), maxLines = 1)
@@ -136,9 +136,9 @@ internal fun SleepTimerCard(sleepAt: Long?, onSet: (Int?) -> Unit, onDismiss: ()
                             }
                             .testTag("sleep:${SLEEP_MINUTES[n]}"),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(11.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        BasicText("%02d".format(n + 1), style = Room.Label.copy(color = if (focused) Room.Signal else Room.Quiet), modifier = Modifier.width(22.dp))
+                        BasicText("%02d".format(n + 1), style = Room.Label.copy(color = if (focused) Room.Signal else Room.Quiet), modifier = Modifier.width(24.dp))
                         BasicText("${SLEEP_MINUTES[n]} min", style = if (focused) Room.Text else Room.Label, maxLines = 1, modifier = Modifier.weight(1f))
                         if (focused) BasicText("▲▼", style = Room.LabelQuiet)
                     }

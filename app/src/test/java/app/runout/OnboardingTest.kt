@@ -58,7 +58,7 @@ class OnboardingTest {
         compose.onNodeWithTag("setup-share").assertIsDisplayed()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/15_setup_share.png")
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/readme/setup-share.png")
-        compose.onNodeWithText("public", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("this folder becomes public").assertIsDisplayed()
 
         compose.onNodeWithTag("setup-share").performClick()
         assertEquals(1, actions.shareAsked)

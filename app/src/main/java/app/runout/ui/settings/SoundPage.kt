@@ -133,7 +133,7 @@ internal object SoundHelp {
 fun SoundPanel(s: SoundSettings, crackleOn: Boolean, actions: RoomActions, output: app.runout.sound.OutputStatus = app.runout.sound.OutputStatus(), state: RoomState? = null) {
     var help by remember { mutableStateOf<TeHelp?>(null) }
     val dsp = !s.pure
-    Column(Modifier.fillMaxWidth().testTag("panel:sound"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("panel:sound"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         PageSection("01 signal") {
             SignalChain(signalPath(output, s, state?.bluetoothCodec?.takeIf { state.bluetoothCodecOn }))
             if (state != null && (output.device.kind == app.runout.sound.OutputKind.BLUETOOTH || state.bluetoothCodecOn)) BluetoothCodecToggle(state, actions)
@@ -154,7 +154,7 @@ fun SoundPanel(s: SoundSettings, crackleOn: Boolean, actions: RoomActions, outpu
             ) { help = SoundHelp.EQ }
             PresetGrid(s, actions, dsp)
             Row(
-                Modifier.fillMaxWidth().hairlineTop().hairlineBottom().padding(vertical = 11.dp),
+                Modifier.fillMaxWidth().hairlineTop().hairlineBottom().padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 SoundSettings.GRAPHIC_LABELS.forEachIndexed { i, label ->
@@ -178,17 +178,17 @@ fun SoundPanel(s: SoundSettings, crackleOn: Boolean, actions: RoomActions, outpu
                 if (pre < -0.05f) "automatic headroom ${"%.1f".format(pre)} db, so boosted bands never clip" else "no boost, no headroom needed",
                 style = Room.LabelQuiet.copy(lineHeight = 15.sp),
             )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 TeButton("import autoeq…", actions::importAutoEq, Modifier.testTag("import-autoeq"), kind = KeyKind.OUTLINE, enabled = dsp)
                 if (s.useParametric) FlatLink("use graphic eq", { actions.updateSound { it.copy(useParametric = false, presetName = "Custom") } }, tag = "use-graphic-eq", enabled = dsp)
             }
         }
         PageSection("04 loudness") {
             Column(
-                Modifier.fillMaxWidth().alpha(if (dsp) 1f else 0.4f).hairlineTop().padding(vertical = 11.dp),
-                verticalArrangement = Arrangement.spacedBy(11.dp),
+                Modifier.fillMaxWidth().alpha(if (dsp) 1f else 0.4f).hairlineTop().padding(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BasicText("replaygain", style = Room.Text)
                     HelpSquare("ReplayGain") { help = SoundHelp.REPLAYGAIN }
                 }
@@ -222,7 +222,7 @@ private fun PresetGrid(s: SoundSettings, actions: RoomActions, enabled: Boolean)
                             .testTag("preset:$name")
                             .semantics { if (on) stateDescription = "Selected" }
                             .overhangTap(enabled = enabled, onClick = pick)
-                            .padding(vertical = 11.dp),
+                            .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         BasicText(name.lowercase(), style = Room.Label.copy(color = if (on) Room.OnInk else Room.Ink), maxLines = 1)
@@ -245,7 +245,7 @@ private fun <T> Segments(options: List<T>, selected: T, label: (T) -> String, on
                     .background(if (on) Room.Ink else Room.Background)
                     .semantics { if (on) stateDescription = "Selected" }
                     .overhangTap(enabled = enabled) { onSelect(o) }
-                    .padding(vertical = 11.dp),
+                    .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 BasicText(label(o), style = Room.Label.copy(color = if (on) Room.OnInk else Room.Ink), maxLines = 1)

@@ -90,7 +90,7 @@ fun FriendsPanel(
             }
             people.error?.let { BasicText(it, style = Room.LabelQuiet.copy(color = Color(0xFFD03A3A)), modifier = Modifier.padding(top = 4.dp)) }
             if (people.searched != null && !people.searching && people.results.isEmpty() && people.error == null) {
-                BasicText("Nobody called “${people.searched}” yet.", style = Room.LabelQuiet, modifier = Modifier.padding(top = 6.dp))
+                BasicText("Nobody called “${people.searched}” yet.", style = Room.LabelQuiet, modifier = Modifier.padding(top = 8.dp))
             }
             people.results.forEach { p ->
                 PersonRow(
@@ -149,7 +149,7 @@ private fun CreateAccount(profile: Profile, actions: RoomActions) {
         SectionTitle("Restore your account")
         Field(key, { key = it.trim() }, "Account key (nsec1…)")
         Field(username, { username = it.take(20) }, "Username (only if your profile is gone)")
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
             Pill("Restore", { actions.restoreAccount(key, u.ifBlank { null }) }, active = true, enabled = AccountRepository.parseSecret(key) != null)
             Pill("Back", { restoring = false })
         }
@@ -172,13 +172,13 @@ private fun YourAccount(account: Account, status: AccountStatus?, actions: RoomA
     ColourDots(Profile.ACCENTS, account.accent, actions::setAccent, Modifier.padding(vertical = 8.dp))
     ToggleRow("Show my records on my profile", "Friends and anyone who finds you see what's on your shelf.", account.shareShelf, actions::setShareShelf)
     status?.let { BasicText(it.message, style = Room.LabelQuiet.copy(color = if (it.ok) Color(0xFF1E8E5A) else Color(0xFFB0641A))) }
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Pill("Send my friend card", actions::shareMyCard)
         Pill("Copy account key", actions::copyAccountKey)
     }
     BasicText(
         "Keep your account key somewhere safe. It's the only way to get @${account.username}·${account.code} back on a new phone.",
-        style = Room.LabelQuiet, modifier = Modifier.padding(top = 6.dp),
+        style = Room.LabelQuiet, modifier = Modifier.padding(top = 8.dp),
     )
 }
 
@@ -231,7 +231,7 @@ private fun ProfilePage(p: RemoteProfile, isFriend: Boolean, shelf: List<Album>,
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         p.shelf.forEach { item -> RemoteSleeve(item, shared = shelf.any { item.matches(it) }, actions = actions) }
     }
-    if (p.shelfCount > p.shelf.size) BasicText("…and ${p.shelfCount - p.shelf.size} more", style = Room.LabelQuiet, modifier = Modifier.padding(top = 6.dp))
+    if (p.shelfCount > p.shelf.size) BasicText("…and ${p.shelfCount - p.shelf.size} more", style = Room.LabelQuiet, modifier = Modifier.padding(top = 8.dp))
     Spacer(Modifier.height(12.dp))
 }
 
@@ -252,9 +252,9 @@ private fun RemoteSleeve(item: ShelfItem, shared: Boolean, actions: RoomActions)
         ) {
             val c = cover
             if (c != null) Image(c, item.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            else BasicText(item.title, style = Room.Label.copy(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(6.dp), maxLines = 4)
+            else BasicText(item.title, style = Room.Label.copy(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(8.dp), maxLines = 4)
         }
-        BasicText(item.title, style = Room.Label.copy(fontSize = 10.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+        BasicText(item.title, style = Room.Label.copy(fontSize = 10.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         BasicText(item.artist, style = Room.LabelQuiet.copy(fontSize = 9.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -262,7 +262,7 @@ private fun RemoteSleeve(item: ShelfItem, shared: Boolean, actions: RoomActions)
 @Composable
 private fun FriendRow(f: Friend, shelf: List<Album>, actions: RoomActions) {
     val inCommon = remember(f, shelf) { f.shelf.count { item -> shelf.any { item.matches(it) } } }
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("friend:${f.profile.name}"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("friend:${f.profile.name}"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = f.profile.isAccount) {
@@ -285,7 +285,7 @@ private fun FriendRow(f: Friend, shelf: List<Album>, actions: RoomActions) {
             Pill("Remove", { actions.removeFriend(f.profile.id) })
         }
         if (f.shelf.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 f.shelf.take(7).forEach { item -> ShelfThumb(item, shared = shelf.any { item.matches(it) }) }
             }
         }
@@ -314,6 +314,6 @@ private fun ShelfThumb(item: ShelfItem, shared: Boolean) {
             .background(item.tint?.let { Color(it) } ?: Color(0xFFE6E6EA)),
     ) {
         if (bmp != null) Image(bmp, item.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        else BasicText(item.title, style = Room.LabelQuiet.copy(fontSize = 6.sp, color = if (item.tint != null) Color.White else Room.Quiet), modifier = Modifier.padding(3.dp), maxLines = 3)
+        else BasicText(item.title, style = Room.LabelQuiet.copy(fontSize = 6.sp, color = if (item.tint != null) Color.White else Room.Quiet), modifier = Modifier.padding(4.dp), maxLines = 3)
     }
 }

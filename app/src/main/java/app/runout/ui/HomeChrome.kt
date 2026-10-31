@@ -78,7 +78,7 @@ internal fun StatusDot(text: String, color: Color, tag: String, onClick: () -> U
             .touchHeight()
             .padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // A square lamp: filled when something's live, hollow when idle.
         Canvas(Modifier.size(8.dp)) {
