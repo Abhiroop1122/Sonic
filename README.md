@@ -27,7 +27,8 @@
 </p>
 
 <p align="center">
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Abhiroop1122/Sonic"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="54" /></a>
+  <a href="https://somchandra17.github.io/sonic-fdroid"><img src="https://img.shields.io/badge/F--Droid-add_the_repo-1976D2?style=for-the-badge&logo=fdroid&logoColor=white" alt="Add the Sonic repository to F-Droid" height="40" /></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Abhiroop1122/Sonic"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="40" /></a>
 </p>
 
 ## Our Vision.
@@ -177,10 +178,10 @@ shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
 Both of these install the same APK as the release above, so you can switch between them without
 reinstalling.
 
-- **Obtainium.** Tap the badge at the top, or add `https://github.com/Abhiroop1122/Sonic` in
+- **Obtainium.** Tap its badge at the top, or add `https://github.com/Abhiroop1122/Sonic` in
   [Obtainium](https://github.com/ImranR98/Obtainium). It installs each new release from here.
-- **F-Droid, Droid-ify or Neo Store.** Open https://somchandra17.github.io/sonic-fdroid on your
-  phone and tap *Add to F-Droid*, or add the repository by hand:
+- **F-Droid, Droid-ify or Neo Store.** Tap the F-Droid badge at the top (or open
+  https://somchandra17.github.io/sonic-fdroid) on your phone, then *Add to F-Droid*, or add the repository by hand:
 
   ```
   https://somchandra17.github.io/sonic-fdroid/repo
@@ -278,8 +279,9 @@ sleeve and onboarding art was made for it too.
 
 ## Licence and credits
 
-Sonic is [MIT licensed](LICENSE). Settings › about names the licences of what's bundled, and
-their full texts ship inside the APK.
+Sonic is [MIT licensed](LICENSE). What it bundles, and under which licences, is listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); Settings › about names them too, and their full
+texts ship inside the APK.
 
 - **Soulseek:** [soulseek-rs-lib v19.1.0](https://github.com/michel/soulseek-rs) (MIT), vendored
   with documented changes in [native/](native/README.md).
