@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.4.2 (2026-10-31)
+
+A redline pass over every screen: the same room, set more carefully.
+
+- **One rhythm.** Every gap and margin sits on a 4 dp grid (12 / 24 / 32 / 64 where it was 11 / 22 / 33 / 66), so rows, sections and keys line up from page to page. The nav bar is 64 dp.
+- **Easier to read.** The smallest text is 11 sp instead of 10. Bold is kept for the big dotted titles; names, album titles and the top bar read in the regular cut, so size and colour carry the order.
+- **Calmer headings.** Sheet and help titles are in sentence case ("How a Soulseek ID works"). Album names are lowercase everywhere, the same in the crate, Dig, Drops, a chat and the record's details. Screen titles and the SONIC. wordmark stay as they were.
+- **Quieter words.** One-line captions lose their full stops, the share step no longer shouts PUBLIC, and a record in the chat list reads "sent night drive — vela park".
+- Icons inside pages are one size.
+
+---
+
 ## 1.4.1 (2026-10-26)
 
 Whether others can reach you, where you'd look for it.
