@@ -1,6 +1,8 @@
 # Getting Sonic onto F-Droid
 
-Sonic isn't on F-Droid yet. This is what's ready, and what's left before the merge request.
+Sonic isn't going into F-Droid's own catalogue: an F-Droid build can't carry the Array font, so it
+would look different. It ships through its own F-Droid repository and Obtainium instead (see
+RELEASE.md, "F-Droid"). What follows is the groundwork, kept in case Sonic ever uses a free font.
 
 Guides: F-Droid's [Submitting to F-Droid Quick Start](https://f-droid.org/en/docs/Submitting_to_F-Droid_Quick_Start_Guide/)
 and [Publishing an app on F-Droid](https://randombits.dev/articles/android/fdroid).

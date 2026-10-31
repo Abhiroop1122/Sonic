@@ -26,6 +26,11 @@
   &nbsp;·&nbsp; <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+<p align="center">
+  <a href="https://somchandra17.github.io/sonic-fdroid"><img src="https://img.shields.io/badge/F--Droid-add_the_repo-1976D2?style=for-the-badge&logo=fdroid&logoColor=white" alt="Add the Sonic repository to F-Droid" height="40" /></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Abhiroop1122/Sonic"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="40" /></a>
+</p>
+
 ## Our Vision.
 
 *Music is one search away now. Type a name and the song plays, then the next one, then the next. It’s effortless, which is exactly why it never feels like a collection. When everything is instant, you lose the weight of an album: the effort it took to track it down, the choice to commit to the highest audio quality, and the feeling of actually owning the music.*
@@ -168,6 +173,24 @@ shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
   doesn't replace it or read its data.
 - No account needed to listen. Skip sign-in and Sonic plays the folder you give it.
 
+### Keep it up to date
+
+Both of these install the same APK as the release above, so you can switch between them without
+reinstalling.
+
+- **Obtainium.** Tap its badge at the top, or add `https://github.com/Abhiroop1122/Sonic` in
+  [Obtainium](https://github.com/ImranR98/Obtainium). It installs each new release from here.
+- **F-Droid, Droid-ify or Neo Store.** Tap the F-Droid badge at the top (or open
+  https://somchandra17.github.io/sonic-fdroid) on your phone, then *Add to F-Droid*, or add the repository by hand:
+
+  ```
+  https://somchandra17.github.io/sonic-fdroid/repo
+  Fingerprint: C482BF3B0848C66DD63E0194711A3DC800487D908D6008A66A124B7E16A91E6B
+  ```
+
+  Sonic isn't in F-Droid's own catalogue: F-Droid builds apps from public source, and the font
+  Sonic is set in may be shipped inside the app but not published.
+
 ### Soulseek, in plain words
 
 Soulseek has no sign-up page: the first time you sign in with a new name, that name becomes your
@@ -256,8 +279,9 @@ sleeve and onboarding art was made for it too.
 
 ## Licence and credits
 
-Sonic is [MIT licensed](LICENSE). Settings › about names the licences of what's bundled, and
-their full texts ship inside the APK.
+Sonic is [MIT licensed](LICENSE). What it bundles, and under which licences, is listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); Settings › about names them too, and their full
+texts ship inside the APK.
 
 - **Soulseek:** [soulseek-rs-lib v19.1.0](https://github.com/michel/soulseek-rs) (MIT), vendored
   with documented changes in [native/](native/README.md).
