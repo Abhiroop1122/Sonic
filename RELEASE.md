@@ -135,6 +135,18 @@ gh release download v<version> --repo Abhiroop1122/Sonic --pattern 'Sonic-*' --d
 
 Creating a release is separate from opening a pull request.
 
+## 6. Publish to the F-Droid repository
+
+[Somchandra17/sonic-fdroid](https://github.com/Somchandra17/sonic-fdroid) serves the release APKs
+to F-Droid, Droid-ify and Neo Store. It picks a new release up within six hours; to publish at once,
+run its workflow:
+
+```bash
+gh workflow run update.yml --repo Somchandra17/sonic-fdroid
+```
+
+Obtainium needs nothing: it installs straight from the GitHub release.
+
 ## Development builds
 
 A development build goes through the same steps with `sonicVersion = "<next>-dev.<n>"`: the release
@@ -153,18 +165,41 @@ gh release create v<next>-dev.<n> \
 
 ## F-Droid
 
-Sonic is being made ready for F-Droid; it isn't submitted yet. What's in place:
+Sonic is not in F-Droid's own catalogue, on purpose. F-Droid builds every app from public source,
+and Array, the font the interface is set in, may be embedded in the app but not published, so an
+F-Droid build would fall back to Silkscreen. Instead:
 
-- Store text and pictures in `fastlane/metadata/android/en-US/` (title, short and full description,
-  icon, feature graphic, screenshots) and a changelog per version code in its `changelogs/`
-  (`<versionCode>.txt`, at most 500 characters). Add one for every release.
-- Tags `v<version>` on every release commit. F-Droid's recipe only follows release tags
-  (`UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$`), never development builds.
-- No dependency metadata in the APK (`dependenciesInfo` off), for reproducible builds.
-- F-Droid builds pass `-Psonic.updates=false`: the in-app GitHub check is off and About says
-  updates come through F-Droid.
-- A draft recipe for `fdroiddata` in [`fdroid/app.sonic.yml`](fdroid/app.sonic.yml), and the steps
-  in [docs/FDROID.md](docs/FDROID.md).
+- **Its own F-Droid repository,** `https://somchandra17.github.io/sonic-fdroid/repo` (fingerprint
+  `C482BF3B0848C66DD63E0194711A3DC800487D908D6008A66A124B7E16A91E6B`), serving the exact release
+  APKs, so installs from there and from GitHub update each other (step 6).
+- **Obtainium,** straight from the GitHub releases.
+
+The store text and pictures in `fastlane/metadata/android/en-US/` feed the repository's listing:
+add `changelogs/<versionCode>.txt` (at most 500 characters) for every release. The groundwork for
+the catalogue (`-Psonic.updates=false`, the draft recipe in [`fdroid/app.sonic.yml`](fdroid/app.sonic.yml),
+[docs/FDROID.md](docs/FDROID.md)) stays in case Sonic ever ships a free font.
+
+## Building on a new machine
+
+Everything is in git except three files, kept out of it on purpose. A copy of them is in the
+encrypted `sonic-keys-<date>.tar.enc` backup (its `RESTORE.txt` says where each goes):
+
+- **`~/.android/debug.keystore`, the key every release is signed with** (certificate SHA-256
+  `1d001a76582b5450dc6795285455321aacaced319cf08fc2040471883b5dd8b8`). Without it a build can't
+  update an installed Sonic; a debug key made on another machine is a different key.
+- **`app/src/main/assets/fonts/licensed/Array-*.ttf`.** Without them the build uses Silkscreen.
+- **`~/.config/sonic-fdroid/`**, the key that signs the F-Droid repository's index.
+
+Then, on macOS or Linux:
+
+1. Install JDK 21, the Android SDK with NDK `27.3.13750724`, and Rust `1.91.0` through rustup with
+   the four Android targets (`aarch64-linux-android`, `armv7-linux-androideabi`,
+   `x86_64-linux-android`, `i686-linux-android`).
+2. Clone `Abhiroop1122/Sonic`, put the three files back, and build:
+   `./gradlew :app:testDebugUnitTest :app:assembleRelease`. The Gradle build compiles the Soulseek
+   library for all four ABIs itself.
+3. Check the APK's signing certificate (section 3) before publishing anything: it must be the
+   SHA-256 above.
 
 ## Older installs and what is still missing
 
