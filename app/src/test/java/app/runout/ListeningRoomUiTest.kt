@@ -305,7 +305,7 @@ class ListeningRoomUiTest {
         compose.onNodeWithTag("details:remove").assertTextContains("remove record").performClick()
         compose.onNodeWithTag("record-details").assertDoesNotExist()
         compose.onNodeWithTag("confirm").assertIsDisplayed()
-        compose.onNodeWithText("REMOVE RECORD?").assertIsDisplayed()
+        compose.onNodeWithText("Remove record?").assertIsDisplayed()
     }
 
     @Test
@@ -705,11 +705,11 @@ class ListeningRoomUiTest {
     fun `swiping the crate with a record out puts it back and digs on`() {
         portrait()
         compose.setContent { RoomScreen(state(), RecordingActions(), initialPulledId = "a2", initialCrateIndex = 1) }
-        compose.onNodeWithText("NIGHT DRIVE").assertExists()
+        compose.onNodeWithText("night drive").assertExists()
         compose.onNodeWithTag("sleeve:Night Drive").performTouchInput { swipeLeft() }
         compose.waitForIdle()
         compose.onNodeWithTag("pulled-disc").assertDoesNotExist()
-        compose.onNodeWithText("NIGHT DRIVE").assertDoesNotExist()
+        compose.onNodeWithText("night drive").assertDoesNotExist()
     }
 
     @Test
@@ -720,13 +720,13 @@ class ListeningRoomUiTest {
             // The room turns by its own shape: wider than tall is sideways.
             Box(Modifier.size(if (upright.value) DpSize(412.dp, 892.dp) else DpSize(412.dp, 300.dp))) { RoomScreen(state(), RecordingActions(), initialCrateIndex = 1) }
         }
-        compose.onNodeWithText("NIGHT DRIVE").assertExists()
+        compose.onNodeWithText("night drive").assertExists()
         compose.onNodeWithTag("sleeve:Night Drive").performTouchInput { swipeLeft() }
         compose.waitForIdle()
         val dug = compose.onNodeWithTag("caption-artist").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString()
         upright.value = false
         compose.waitForIdle()
-        compose.onNodeWithText("NIGHT DRIVE").assertDoesNotExist()
+        compose.onNodeWithText("night drive").assertDoesNotExist()
         compose.onNodeWithTag("caption-artist").assertTextContains(dug.substringBefore(" ·"), substring = true)
     }
 

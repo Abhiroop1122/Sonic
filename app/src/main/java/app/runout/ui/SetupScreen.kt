@@ -169,8 +169,8 @@ private fun StepKey(
             .background(if (enabled) Room.Ink else Room.Faint)
             .clickable(enabled = enabled, interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onClick() }
             .testTag(tag)
-            .padding(horizontal = 22.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(11.dp, Alignment.CenterHorizontally),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) Canvas(Modifier.size(16.dp)) { icon() }
@@ -218,7 +218,7 @@ private fun StepPage(
     val art = if (picture != null) rememberOnboardingPicture(picture, STEP_PICTURE_MAX) else null
     FootColumn {
         // 22 in on the board; the 48 dp touch height of "← back" takes up most of that.
-        Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 5.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextKey("← back", onBack, "setup-back", Modifier.semantics { contentDescription = "Back" })
             Spacer(Modifier.weight(1f))
             Pips(number)
@@ -226,11 +226,11 @@ private fun StepPage(
         BasicText(
             "%02d".format(number),
             style = Room.Display.copy(fontSize = 132.sp, lineHeight = 119.sp),
-            modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 33.dp).clearAndSetSemantics { },
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 32.dp).clearAndSetSemantics { },
         )
-        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 22.dp), contentAlignment = Alignment.CenterStart) {
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp), contentAlignment = Alignment.CenterStart) {
             // 22 under the number; the copy's own 22 keeps it off the kicker.
-            val side = minOf(maxHeight - 22.dp, maxWidth, STEP_PICTURE_MAX)
+            val side = minOf(maxHeight - 24.dp, maxWidth, STEP_PICTURE_MAX)
             if (art != null && side >= STEP_PICTURE_MIN) {
                 val shown = remember(art) { Animatable(0f) }
                 LaunchedEffect(art) { shown.animateTo(1f, tween(260)) }
@@ -239,7 +239,7 @@ private fun StepPage(
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .padding(top = 22.dp)
+                        .padding(top = 24.dp)
                         .size(side)
                         .graphicsLayer { alpha = shown.value }
                         .testTag("setup-picture"),
@@ -247,11 +247,11 @@ private fun StepPage(
             }
         }
         Column(
-            Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+            Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
             content = copy,
         )
-        if (actions != null) ActionColumn(Modifier.padding(top = 22.dp), actions)
+        if (actions != null) ActionColumn(Modifier.padding(top = 24.dp), actions)
     }
 }
 
@@ -269,14 +269,14 @@ private val STEP_PICTURE_MIN = 96.dp
 @Composable
 private fun ActionColumn(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, bottom = LINK_FOOT),
+        modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = LINK_FOOT),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content,
     )
 }
 
 /** 33 dp under the last link's text, less the half of its touch height that sits under it. */
-private val LINK_FOOT = 17.dp
+private val LINK_FOOT = 16.dp
 
 /** "what's this?" in blue, its text resting on the field's rule, with a 48 dp touch height. */
 @Composable
@@ -354,15 +354,15 @@ private fun LoginStep(state: RoomState, actions: RoomActions, onClose: (() -> Un
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 22.dp, end = 22.dp, top = 33.dp, bottom = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
+                    .padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 Wordmark(wordmark.sp)
                 if (!typing) BasicText("every record you own. one room to play them.", style = OnboardingBody, modifier = Modifier.fillMaxWidth())
                 if (session.connected) {
                     BasicText("signed in to soulseek as ${session.username}.", style = OnboardingBody)
                 } else {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.Bottom) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
                         LineField(
                             id, { id = it.take(30) }, label = "soulseek id", placeholder = "your name", name = "Soulseek ID",
                             quietRule = typing, imeAction = ImeAction.Next, modifier = Modifier.weight(1f),
@@ -407,7 +407,7 @@ private fun LoginStep(state: RoomState, actions: RoomActions, onClose: (() -> Un
                 Modifier
                     .align(Alignment.TopEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(horizontal = 22.dp)
+                    .padding(horizontal = 24.dp)
                     .semantics { contentDescription = "Close" },
             )
         }
@@ -553,16 +553,16 @@ private fun PublicNote() {
         Modifier
             .fillMaxWidth()
             .border(1.dp, Room.Warning)
-            .padding(11.dp)
+            .padding(12.dp)
             .semantics(mergeDescendants = true) { }
             .testTag("share-public-note"),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Level with the first line's capitals.
-        Box(Modifier.padding(top = 3.dp).size(8.dp).background(Room.Warning))
+        Box(Modifier.padding(top = 4.dp).size(8.dp).background(Room.Warning))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            BasicText("this folder becomes PUBLIC.", style = Room.Label)
-            BasicText("nothing else on your phone is.", style = Room.Label)
+            BasicText("this folder becomes public", style = Room.Label)
+            BasicText("nothing else on your phone is", style = Room.Label)
         }
     }
 }
@@ -618,10 +618,10 @@ private fun RhythmCard(title: String, detail: String, selected: Boolean, enabled
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Box(Modifier.size(16.dp).border(1.dp, Room.Ink).padding(3.dp)) {
+        Box(Modifier.size(16.dp).border(1.dp, Room.Ink).padding(4.dp)) {
             if (selected) Box(Modifier.size(8.dp).background(Room.Ink))
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             BasicText(title, style = Room.Text)
             BasicText(detail, style = Room.LabelQuiet.copy(lineHeight = 15.sp), modifier = Modifier.fillMaxWidth())
         }
@@ -687,12 +687,12 @@ private fun WelcomeStep(name: String?, deckSkin: DeckSkin, onFinish: () -> Unit)
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(if (beside) WindowInsetsSides.Vertical + WindowInsetsSides.End else WindowInsetsSides.Vertical + WindowInsetsSides.Horizontal))
                 .padding(
-                    start = 22.dp + if (beside) with(density) { deck!!.right.toDp() } else 0.dp,
-                    end = 22.dp,
-                    top = 33.dp,
-                    bottom = 66.dp,
+                    start = 24.dp + if (beside) with(density) { deck!!.right.toDp() } else 0.dp,
+                    end = 24.dp,
+                    top = 32.dp,
+                    bottom = 64.dp,
                 ),
-            verticalArrangement = Arrangement.spacedBy(22.dp, Alignment.Bottom),
+            verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.Bottom),
         ) {
             if (deck == null) {
                 val captured = introDeckPictures(deckSkin)?.let { rememberOnboardingPicture(it[0], 600.dp) }
@@ -711,15 +711,15 @@ private fun WelcomeStep(name: String?, deckSkin: DeckSkin, onFinish: () -> Unit)
                     alpha = pop.value.coerceIn(0f, 1f) * leave.value
                     translationY = (1f - leave.value) * 12.dp.toPx()
                 },
-                verticalArrangement = Arrangement.spacedBy(22.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                Box(Modifier.size(22.dp).background(Room.Signal))
+                Box(Modifier.size(24.dp).background(Room.Signal))
                 BasicText(
                     "WELCOME IN, ${(name ?: "listener").uppercase()}.",
                     style = Room.Display.copy(lineHeight = 46.sp),
                     modifier = Modifier.fillMaxWidth().semantics { heading() },
                 )
-                BasicText("make yourself at home.", style = Room.Text.copy(color = Room.Body))
+                BasicText("make yourself at home", style = Room.Text.copy(color = Room.Body))
             }
         }
     }

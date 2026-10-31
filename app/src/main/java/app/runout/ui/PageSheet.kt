@@ -102,12 +102,12 @@ private fun SheetBody(tag: String, onDismiss: () -> Unit, title: String?, invert
                     .hairlineTop(if (inverted) Room.InverseDanger else Room.Ink, 2.dp)
                     .pointerInput(Unit) { detectTapGestures { } }
                     .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
-                    .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 33.dp)
+                    .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 32.dp)
                     .testTag(tag),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 if (title != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    BasicText(title.uppercase(), style = Room.Title, modifier = Modifier.weight(1f))
+                    BasicText(sentence(title), style = Room.Title, modifier = Modifier.weight(1f))
                     CloseKey(onDismiss)
                 }
                 content()

@@ -95,7 +95,7 @@ fun TeButton(
                     KeyKind.OUTLINE -> Modifier.background(Room.Background).border(1.dp, Room.Ink)
                 },
             )
-            .padding(horizontal = 22.dp, vertical = 16.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(text, style = Room.Text.copy(color = if (kind == KeyKind.FILLED) Room.OnInk else Room.Ink), maxLines = 1)
@@ -133,7 +133,7 @@ fun TeLink(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, tag
 /** TE Tag: a 1 dp outlined label, 3 × 6 padding, 10/400. Orange for hi-res, ink otherwise. */
 @Composable
 fun TeTag(text: String, modifier: Modifier = Modifier, color: Color = Room.Ink) {
-    BasicText(text, style = Room.Label.copy(color = color), maxLines = 1, modifier = modifier.border(1.dp, color).padding(horizontal = 6.dp, vertical = 3.dp))
+    BasicText(text, style = Room.Label.copy(color = color), maxLines = 1, modifier = modifier.border(1.dp, color).padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
 /** TE Status: an 8 dp square lamp and a 10/400 label. */
@@ -171,9 +171,9 @@ fun ToggleRow(
             .testTag("toggle:$title")
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(title.lowercase(), style = Room.Text)
                 if (more != null) InfoDot(title) { open = !open }
@@ -207,10 +207,10 @@ fun TeRow(
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onClick() }
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (index != null) BasicText(index, style = Room.LabelQuiet, modifier = Modifier.width(22.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (index != null) BasicText(index, style = Room.LabelQuiet, modifier = Modifier.width(24.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             BasicText(title, style = Room.Text.copy(color = titleColor), maxLines = 2)
             if (detail != null) BasicText(detail, style = Room.LabelQuiet, maxLines = 2)
         }
@@ -265,7 +265,7 @@ internal fun TeKey(
                 drawRect(if (selected) Room.Ink else if (pressed) Room.HairlineSoft else Room.Background)
                 drawRect(Room.Ink, style = Stroke(1.dp.toPx()))
             }
-            .padding(horizontal = 11.dp, vertical = 11.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) Canvas(Modifier.size(16.dp)) { icon(ink) }
@@ -276,7 +276,7 @@ internal fun TeKey(
 /** TE Switch, 44 × 22 with 2 dp inside: on, an ink outline and an 18 dp ink knob at the right; off, grey and hollow at the left. */
 @Composable
 internal fun Switch(checked: Boolean) {
-    Canvas(Modifier.size(44.dp, 22.dp)) {
+    Canvas(Modifier.size(44.dp, 24.dp)) {
         val line = 1.dp.toPx()
         val c = if (checked) Room.Ink else Room.Faint
         drawRect(c, topLeft = Offset(line / 2, line / 2), size = Size(size.width - line, size.height - line), style = Stroke(line))
@@ -298,7 +298,7 @@ fun <T> Chips(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { o -> TeKey(label(o), { onSelect(o) }, selected = o == selected, enabled = enabled) }
     }
 }
@@ -312,7 +312,7 @@ fun ColourDots(colours: List<Int>, selected: Int, onSelect: (Int) -> Unit, modif
                 Modifier
                     .size(24.dp)
                     .border(if (c == selected) 2.dp else 0.dp, if (c == selected) Room.Ink else Color.Transparent)
-                    .padding(3.dp)
+                    .padding(4.dp)
                     .background(Color(c))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(c) }
                     .semantics { contentDescription = "Colour ${Integer.toHexString(c)}" },
@@ -324,7 +324,7 @@ fun ColourDots(colours: List<Int>, selected: Int, onSelect: (Int) -> Unit, modif
 /** A section label, as "01 signal": 10/400 grey, set as given. */
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    BasicText(text, style = Room.LabelQuiet, modifier = modifier.padding(top = 22.dp, bottom = 11.dp))
+    BasicText(text, style = Room.LabelQuiet, modifier = modifier.padding(top = 24.dp, bottom = 12.dp))
 }
 
 /**
@@ -391,7 +391,7 @@ fun EqFader(
     Column(
         modifier.alpha(if (enabled) 1f else 0.4f).semantics { contentDescription = "$label Hz ${"%.1f".format(gainDb)} dB" }.testTag("fader:$label"),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         BasicText(
             (if (gainDb > 0.05f) "+" else "") + if (gainDb.roundToInt().toFloat() == gainDb) gainDb.roundToInt().toString() else "%.1f".format(gainDb),
@@ -444,17 +444,17 @@ fun ProgressLine(fraction: Float, modifier: Modifier = Modifier, colour: Color =
 /** A section heading: a 10/400 grey kicker, a 22/700 title and an optional 10/400 line under it. */
 @Composable
 internal fun ConsoleTitle(kicker: String, title: String, detail: String? = null) {
-    BasicText(kicker.lowercase(), style = Room.LabelQuiet, modifier = Modifier.padding(bottom = 11.dp))
-    BasicText(title.uppercase(), style = Room.Title)
-    if (detail != null) BasicText(detail.lowercase(), style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.padding(top = 11.dp, bottom = 11.dp))
+    BasicText(kicker.lowercase(), style = Room.LabelQuiet, modifier = Modifier.padding(bottom = 12.dp))
+    BasicText(sentence(title), style = Room.Title)
+    if (detail != null) BasicText(detail.lowercase(), style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
 }
 
 /** A flat grey tile (#F5F5F5) for one item, 11 dp inside. */
 @Composable
 internal fun ConsoleCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().background(Room.Surface).padding(11.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+        modifier.fillMaxWidth().background(Room.Surface).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         content = content,
     )
 }

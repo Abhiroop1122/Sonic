@@ -110,16 +110,16 @@ private val HelpEncryption = TeHelp(
 fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -> Unit, onSignIn: () -> Unit = {}, onDownloads: () -> Unit = {}) {
     val session = state.soulseekSession
     var help by remember { mutableStateOf<TeHelp?>(null) }
-    Column(Modifier.fillMaxWidth().testTag("panel:account"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("panel:account"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         BasicText(
             "your local flac library is yours to play without an account. sign in to search soulseek, download from soulseek or the internet archive, and message people.",
             style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
         )
         PageSection(if (session.hasAccount) "01 account · ${session.username}" else "01 account") {
             Row(
-                Modifier.fillMaxWidth().hairlineTop().hairlineBottom().padding(vertical = 11.dp),
+                Modifier.fillMaxWidth().hairlineTop().hairlineBottom().padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(11.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(8.dp).background(if (session.hasAccount) lampColor(session) else Room.Faint))
@@ -183,9 +183,9 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
             ) { help = HelpWifiOnly }
             Column(
                 Modifier.fillMaxWidth().alpha(if (sharing) 1f else 0.4f).hairlineTop().padding(vertical = 16.dp).testTag("upload-slots"),
-                verticalArrangement = Arrangement.spacedBy(11.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     BasicText("uploads at once", style = Room.Text)
                     BasicText("how many people can download from you at the same time. fewer is easier on a slow connection.", style = Room.LabelQuiet)
                 }
@@ -205,7 +205,7 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
             if (state.soulseekBackgroundConsent && !state.soulseekStayOnline) BasicText("background mode is paused. check notification permission and reconnect to resume.", style = Room.LabelQuiet.copy(lineHeight = 15.sp))
         }
         // The one warning on the page: amber, a bold "!", and its "?".
-        Row(Modifier.fillMaxWidth().background(Room.Warning).padding(11.dp), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(Room.Warning).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             BasicText("!", style = Room.Heading.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
             BasicText("soulseek's protocol does not encrypt sign-in credentials or private messages.", style = Room.Label.copy(lineHeight = 15.sp), modifier = Modifier.weight(1f))
             InfoDot("encryption") { help = HelpEncryption }
@@ -224,9 +224,9 @@ internal fun FolderRow(folder: String?, onPick: () -> Unit, tag: String) {
             .hairlineBottom()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onPick)
             .testTag(tag)
-            .padding(vertical = 11.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         BasicText(folder?.let(::folderLabel) ?: "no folder yet", style = Room.Text.copy(color = if (folder == null) Room.Quiet else Room.Ink), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         BasicText(if (folder == null) "choose" else "change", style = Room.Text)
@@ -245,10 +245,10 @@ internal fun folderLabel(uri: String): String {
 @Composable
 private fun TransferTotalsBlock(totals: app.runout.soulseek.TransferTotals) {
     fun files(n: Int) = if (n == 1) "1 file" else "$n files"
-    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("transfer-totals"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("transfer-totals"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         BasicText("uploaded to others", style = Room.Text)
         BasicText("${app.runout.ui.sizeLabel(totals.uploadedBytes)} · ${files(totals.uploadedFiles)}", style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("totals-uploaded"))
-        BasicText("downloaded", style = Room.Text, modifier = Modifier.padding(top = 5.dp))
+        BasicText("downloaded", style = Room.Text, modifier = Modifier.padding(top = 4.dp))
         BasicText("${app.runout.ui.sizeLabel(totals.downloadedBytes)} · ${files(totals.downloadedFiles)}", style = Room.Label.copy(color = Room.Body), modifier = Modifier.testTag("totals-downloaded"))
         val since = totals.since.takeIf { it > 0 }?.let {
             java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
@@ -276,7 +276,7 @@ private fun ReachabilityLine(port: app.runout.soulseek.PortState) {
         app.runout.soulseek.PortState.Off -> Room.Quiet to "not connected to a network."
     }
     Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth().testTag("reachability"), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.Top) {
+        Row(Modifier.fillMaxWidth().testTag("reachability"), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             Box(Modifier.padding(top = 4.dp).size(8.dp).background(lamp))
             BasicText(text, style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp), modifier = Modifier.weight(1f))
         }
@@ -286,7 +286,7 @@ private fun ReachabilityLine(port: app.runout.soulseek.PortState) {
                 "or forward it by hand: in your router's settings, send tcp port ${port.port} to ${port.local}, this phone. " +
                     "sonic always listens on that port. reserve the address for this phone too, so the router doesn't hand it to another device.",
                 style = Room.LabelQuiet.copy(lineHeight = 15.sp),
-                modifier = Modifier.padding(start = 19.dp).testTag("port-forward-hint"),
+                modifier = Modifier.padding(start = 20.dp).testTag("port-forward-hint"),
             )
         }
     }
@@ -313,7 +313,7 @@ internal fun connectionSummary(state: RoomState): String {
 internal fun ConnectionPage(state: RoomState) {
     PageSection("01 can others reach you") {
         if (state.soulseekSession.connected) ReachabilityLine(state.soulseekReachability)
-        else Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("reachability"), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.Top) {
+        else Row(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("reachability"), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             Box(Modifier.padding(top = 4.dp).size(8.dp).background(Room.Quiet))
             BasicText(
                 if (state.soulseekSession.hasAccount) "connect to soulseek to check whether others can reach you." else "sign in to soulseek to check whether others can reach you.",

@@ -103,8 +103,8 @@ internal fun ConnectionNotice(state: RoomState, actions: RoomActions, onAccount:
     val session = state.soulseekSession
     if(session.connected) return
     Column(
-        Modifier.fillMaxWidth().padding(bottom = 22.dp).background(Room.Surface).padding(16.dp).testTag("connection-notice"),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+        Modifier.fillMaxWidth().padding(bottom = 24.dp).background(Room.Surface).padding(16.dp).testTag("connection-notice"),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(8.dp).background(lampColor(session)))
@@ -132,7 +132,7 @@ internal fun ConnectionNotice(state: RoomState, actions: RoomActions, onAccount:
 @Composable
 internal fun NetworkNote(state: RoomState, actions: RoomActions) {
     val note = state.soulseekError ?: state.soulseekSession.error ?: return
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.Top) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
         Box(Modifier.padding(top = 4.dp).size(8.dp).background(Room.Danger))
         BasicText(note.lowercase(), style = Room.Label.copy(color = Room.Danger, lineHeight = 15.sp), modifier = Modifier.weight(1f).testTag("soulseek-error"))
         ArrowLink("dismiss", actions::clearSoulseekError, tag = "soulseek-error-dismiss")
@@ -142,7 +142,7 @@ internal fun NetworkNote(state: RoomState, actions: RoomActions) {
 /** Signed out on Friends: one 10/400 line about what signing in gives you, and the black key. */
 @Composable
 private fun SignInNotice(onAccount: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BasicText("sign in with soulseek to search, download flac and send private messages.", style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp))
         TeButton("sign in with soulseek", onAccount)
     }
@@ -210,7 +210,7 @@ fun SoulseekTransfersPanel(state: RoomState, actions: RoomActions, onDig: () -> 
     }
     var help by remember { mutableStateOf<TeHelp?>(null) }
     val signedIn = state.soulseekSession.signedIn
-    Column(Modifier.fillMaxWidth().testTag("panel:transfers"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("panel:transfers"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         if (restricted) BackgroundUseNote { help = HelpBackgroundUsage }
         NetworkNote(state, actions)
         val groups = state.soulseekTransfers.groupBy { downloadGroup(it.state) }
@@ -229,14 +229,14 @@ fun SoulseekTransfersPanel(state: RoomState, actions: RoomActions, onDig: () -> 
                 }
             }
         }
-        if (state.soulseekUploads.isNotEmpty()) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        if (state.soulseekUploads.isNotEmpty()) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 BasicText("shared flac uploads", style = Room.LabelQuiet)
                 ArrowLink("stop sharing", { actions.setSoulseekSharing(false) }, tag = "stop-sharing")
             }
             Column(Modifier.fillMaxWidth()) {
                 state.soulseekUploads.forEach { upload ->
-                    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         BasicText(upload.fileName, style = Room.Label.copy(lineHeight = 15.sp))
                         Row(Modifier.fillMaxWidth().padding(end = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             TeStatus("${upload.username} · ${upload.state.lowercase()}", Room.Signal)
@@ -249,7 +249,7 @@ fun SoulseekTransfersPanel(state: RoomState, actions: RoomActions, onDig: () -> 
         }
         // Everything at once, then turtle mode: one download at a time, gently.
         Column(Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            Row(Modifier.padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 ArrowLink("pause all", actions::pauseAllDownloads, enabled = signedIn, tag = "downloads-pause-all")
                 ArrowLink("resume all", actions::resumeAllDownloads, enabled = signedIn, tag = "downloads-resume-all")
             }
@@ -279,10 +279,10 @@ private fun TransferRow(index: Int, transfer: SoulseekTransfer, state: RoomState
     val (folderArtist, folderTitle) = app.runout.discovery.folderNames(transfer.directory)
     val albumTitle = shelf?.title ?: folderTitle
     val reason = transfer.error?.trimEnd('.')?.lowercase()
-    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("transfer:${transfer.id}"), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(Modifier.fillMaxWidth().hairlineTop().padding(vertical = 16.dp).testTag("transfer:${transfer.id}"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BasicText("%02d".format(index), style = Room.LabelQuiet)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(transfer.fileName, style = Room.Label.copy(lineHeight = 15.sp))
                 if (!archive) BasicText("from ${albumTitle.lowercase()}", style = Room.LabelQuiet, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("transfer-album:${transfer.id}"))
             }
@@ -292,7 +292,7 @@ private fun TransferRow(index: Int, transfer: SoulseekTransfer, state: RoomState
             Recovery.SEEK -> "looking for another copy"
             null -> transfer.state.name.lowercase()
         }
-        Row(Modifier.fillMaxWidth().padding(end = 12.dp), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(end = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             TeStatus(
                 "${transfer.username} · $doing" + (transfer.queuePosition?.let { " · place $it in their queue" } ?: ""),
                 stateColor(transfer.state),
@@ -305,24 +305,24 @@ private fun TransferRow(index: Int, transfer: SoulseekTransfer, state: RoomState
         }
         ProgressLine(transfer.progress, colour = stateColor(transfer.state))
         when {
-            transfer.recovery == Recovery.RETRY -> Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            transfer.recovery == Recovery.RETRY -> Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 ArrowLink("retry now", { actions.resumeSoulseekTransfer(transfer.id) }, enabled = signedIn, tag = "retry-now:${transfer.id}")
                 ArrowLink("remove", { actions.removeSoulseekTransfer(transfer.id) }, tag = "remove:${transfer.id}")
             }
-            transfer.recovery == Recovery.SEEK -> Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            transfer.recovery == Recovery.SEEK -> Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 ArrowLink("stop", { actions.pauseSoulseekTransfer(transfer.id) }, tag = "pause:${transfer.id}")
                 ArrowLink("remove", { actions.removeSoulseekTransfer(transfer.id) }, tag = "remove:${transfer.id}")
             }
-            transfer.state == SoulseekTransferState.QUEUED || transfer.state == SoulseekTransferState.DOWNLOADING -> Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            transfer.state == SoulseekTransferState.QUEUED || transfer.state == SoulseekTransferState.DOWNLOADING -> Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 ArrowLink("pause", { actions.pauseSoulseekTransfer(transfer.id) }, tag = "pause:${transfer.id}")
                 ArrowLink("remove", { actions.removeSoulseekTransfer(transfer.id) }, tag = "remove:${transfer.id}")
             }
-            transfer.state == SoulseekTransferState.PAUSED -> Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+            transfer.state == SoulseekTransferState.PAUSED -> Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 ArrowLink("resume", { actions.resumeSoulseekTransfer(transfer.id) }, enabled = signedIn, tag = "resume:${transfer.id}")
                 ArrowLink("remove", { actions.removeSoulseekTransfer(transfer.id) }, tag = "remove:${transfer.id}")
             }
             transfer.state == SoulseekTransferState.FAILED || transfer.state == SoulseekTransferState.CANCELLED -> androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(22.dp), verticalArrangement = Arrangement.spacedBy(11.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (transfer.failure == FailureKind.FOLDER) ArrowLink("choose folder", actions::pickDownloadFolder, tag = "choose-folder:${transfer.id}")
                 ArrowLink("retry", { actions.retrySoulseekTransfer(transfer.id) }, enabled = signedIn, tag = "retry:${transfer.id}")
@@ -379,14 +379,14 @@ fun SoulseekMessagesPanel(state: RoomState, actions: RoomActions, onAccount: () 
             }
         } else if (peer == null) {
             var newChat by remember { mutableStateOf(false) }
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 if (!state.soulseekSession.signedIn) SignInNotice(onAccount)
                 NetworkNote(state, actions)
                 LocalMessagesNote()
                 val friends = state.soulseekContacts
                 if (friends.isNotEmpty()) {
                     BasicText("friends · ${friends.count { it.online }} online", style = Room.LabelQuiet)
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         friends.sortedByDescending { it.online }.forEach { f ->
                             val unread = state.soulseekConversations.firstOrNull { it.username == f.username }?.unread ?: 0
                             Column(
@@ -395,7 +395,7 @@ fun SoulseekMessagesPanel(state: RoomState, actions: RoomActions, onAccount: () 
                                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { selected = f.username; actions.openSoulseekConversation(f.username) }
                                     .semantics { stateDescription = if (f.online) "Online" else "Offline" },
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(11.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Avatar(f.username, online = f.online, size = 56.dp, lit = unread > 0)
                                 BasicText(f.username, style = Room.Label, maxLines = 1)
@@ -421,11 +421,11 @@ fun SoulseekMessagesPanel(state: RoomState, actions: RoomActions, onAccount: () 
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             Avatar(c.username, online = contact?.online, size = 40.dp)
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 BasicText(c.username, style = Room.Text, maxLines = 1)
                                 BasicText(last?.let { preview(it) } ?: "", style = Room.Label.copy(color = if (c.unread > 0) Room.Ink else Room.Quiet), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Column(Modifier.widthIn(min = 44.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                            Column(Modifier.widthIn(min = 44.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 last?.let { BasicText(dayLabel(it.timestamp, clock), style = Room.LabelQuiet, maxLines = 1) }
                                 if (c.unread > 0) Box(Modifier.size(8.dp).background(Room.Signal).semantics { contentDescription = "${c.unread} unread" })
                             }
@@ -437,14 +437,14 @@ fun SoulseekMessagesPanel(state: RoomState, actions: RoomActions, onAccount: () 
             Column(
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .size(66.dp)
+                    .size(64.dp)
                     .alpha(if (state.soulseekSession.signedIn) 1f else 0.4f)
                     .background(Room.Ink)
                     .clickable(enabled = state.soulseekSession.signedIn, interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { newChat = true }
                     .semantics(mergeDescendants = true) { contentDescription = "New chat" }
                     .testTag("new-chat"),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             ) {
                 BasicText("+", style = Room.Title.copy(color = Room.OnInk, lineHeight = 22.sp))
                 BasicText("new", style = Room.Label.copy(color = Room.OnInk))
@@ -472,7 +472,7 @@ private fun LocalMessagesNote() {
         Modifier
             .fillMaxWidth()
             .border(1.dp, Room.Warning)
-            .padding(11.dp)
+            .padding(12.dp)
             .semantics(mergeDescendants = true) { }
             .testTag("messages-local-note"),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -508,8 +508,9 @@ private fun Avatar(name: String, online: Boolean?, size: Dp, lit: Boolean = fals
 
 private fun preview(m: SoulseekMessage): String {
     val card = RecordCard.parse(m.text)
-    val text = if (card != null) "♪ ${card.album} — ${card.artist}" else m.text
-    return (if (m.outgoing) "you: " else "") + text.lineSequence().first()
+    // A record card reads as what happened, not as a symbol: "sent moon safari — air", "you sent …".
+    if (card != null) return (if (m.outgoing) "you sent " else "sent ") + "${card.album} — ${card.artist}".lowercase()
+    return (if (m.outgoing) "you: " else "") + m.text.lineSequence().first()
 }
 
 /** The clock as the phone sets it, without am/pm: "5:14", "17:14". */
@@ -555,9 +556,9 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
     val conversation = state.soulseekConversations.firstOrNull { it.username == peer }
     LaunchedEffect(peer, conversation?.unread) { actions.markSoulseekRead(peer) }
     val contact = state.soulseekContacts.firstOrNull { it.username == peer }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(
-            Modifier.fillMaxWidth().hairlineBottom(Room.Ink).padding(bottom = 11.dp),
+            Modifier.fillMaxWidth().hairlineBottom(Room.Ink).padding(bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -568,7 +569,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                     .testTag("chats-back")
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onBack),
             )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicText(peer, style = Room.Strong, maxLines = 1)
                 if (contact == null) ArrowLink("add friend", { actions.addSoulseekContact(peer) }, tag = "add-friend")
                 else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -586,7 +587,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                 Column(
                     Modifier.fillMaxWidth(),
                     horizontalAlignment = if (message.outgoing && card == null) Alignment.End else Alignment.Start,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (card != null) RecordCardView(card, state, mine = message.outgoing) {
                         // The exact folder it came from when the card says; its preview offers
@@ -606,7 +607,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                             .widthIn(max = 300.dp)
                             .background(if (message.outgoing) Room.Ink else Room.Signal)
                             .testTag(if (message.outgoing) "bubble:mine" else "bubble:theirs")
-                            .padding(horizontal = 16.dp, vertical = 11.dp),
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     val pending = message.outgoing && message.state != SoulseekMessageState.SENT
                     BasicText(
@@ -619,7 +620,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
         }
         // The composer: the field boxed in a 1 dp ink outline, 11 dp in, then the their-shelf key
         // and the black send key; 11 dp clear of the page's left edge and its foot.
-        Column(Modifier.padding(start = 11.dp, bottom = 11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.padding(start = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             var text by rememberSaveable(peer) { mutableStateOf("") }
             val bytes = text.trim().toByteArray(Charsets.UTF_8).size
             val canSend = state.soulseekSession.signedIn && text.isNotBlank() && bytes <= 4096
@@ -627,7 +628,7 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                 val submitted = text
                 actions.sendSoulseekMessage(peer, submitted) { if (text == submitted) text = "" }
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicTextField(
                     value = text,
                     onValueChange = { text = it },
@@ -643,9 +644,9 @@ private fun Chat(peer: String, state: RoomState, actions: RoomActions, clock: (L
                         .border(1.dp, Room.Ink)
                         .testTag("field:Private message")
                         .semantics { contentDescription = "Private message" }
-                        .padding(11.dp),
+                        .padding(12.dp),
                     decorationBox = { inner ->
-                        Box(Modifier.heightIn(min = 22.dp), contentAlignment = Alignment.CenterStart) {
+                        Box(Modifier.heightIn(min = 24.dp), contentAlignment = Alignment.CenterStart) {
                             if (text.isEmpty()) BasicText("private message", style = Room.Text.copy(color = Room.Faint))
                             inner()
                         }
@@ -722,8 +723,8 @@ private fun RecordCardView(card: RecordCard, state: RoomState, mine: Boolean, on
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         if (local != null) SleeveArt(local, Modifier.size(110.dp), showSticker = false) else GeneratedSleeve(card.album, card.artist, Modifier.size(110.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            BasicText(card.album, style = Room.Label.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BasicText(card.album.lowercase(), style = Room.Label, maxLines = 2, overflow = TextOverflow.Ellipsis)
             BasicText(card.artist, style = Room.Label.copy(color = Room.Body), maxLines = 1, overflow = TextOverflow.Ellipsis)
             card.quality?.let { val (spec, hiRes) = specShort(it); TeTag(spec, color = if (hiRes) Room.Signal else Room.Ink) }
             if (!mine) {
@@ -790,10 +791,10 @@ private fun BackgroundUseNote(onHelp: () -> Unit) {
             .background(Room.Warning)
             .padding(16.dp)
             .testTag("background-restricted"),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-            BasicText("BACKGROUND USAGE IS OFF", style = Room.Strong)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BasicText("Background usage is off", style = Room.Strong)
             InfoDot("background usage", onHelp)
         }
         BasicText(
@@ -819,8 +820,8 @@ private fun BackgroundUseNote(onHelp: () -> Unit) {
 private fun FriendShelf(shelf: app.runout.soulseek.SoulseekShelf, signedIn: Boolean, ours: app.runout.soulseek.PortState, onBack: () -> Unit, onOpen: (String) -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     PageStep(onBack)
-    Column(Modifier.fillMaxSize().testTag("friend-shelf"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-        Row(Modifier.fillMaxWidth().hairlineBottom(Room.Ink).padding(bottom = 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+    Column(Modifier.fillMaxSize().testTag("friend-shelf"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Row(Modifier.fillMaxWidth().hairlineBottom(Room.Ink).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             BasicText(
                 "← chat", style = Room.Text,
                 modifier = Modifier.testTag("shelf-back").clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onBack),
@@ -851,7 +852,7 @@ private fun FriendShelf(shelf: app.runout.soulseek.SoulseekShelf, signedIn: Bool
                                 .testTag("shelf-folder:${f.title}")
                                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { onOpen(f.directory) }
                                 .padding(vertical = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             BasicText(f.title.lowercase(), style = Room.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (f.parent.isNotBlank()) BasicText(f.parent.lowercase(), style = Room.LabelQuiet, maxLines = 1, overflow = TextOverflow.Ellipsis)

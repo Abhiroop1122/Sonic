@@ -213,7 +213,7 @@ internal fun SignalChip(path: SignalPath, onClick: () -> Unit, modifier: Modifie
             .heightIn(min = 32.dp)
             .padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(Modifier.size(8.dp).background(if (good) Room.Online else Room.Signal))
         BasicText(path.short, style = Room.LabelQuiet.copy(fontSize = 10.sp, color = Room.Ink), maxLines = 1)
@@ -228,7 +228,7 @@ internal fun SignalChip(path: SignalPath, onClick: () -> Unit, modifier: Modifie
  * Settings › Sound, 16 dp in the Audio quality panel). [onVerdictHelp] adds the "?" to the verdict.
  */
 @Composable
-internal fun SignalChain(path: SignalPath?, modifier: Modifier = Modifier, gap: Dp = 11.dp, onVerdictHelp: (() -> Unit)? = null) {
+internal fun SignalChain(path: SignalPath?, modifier: Modifier = Modifier, gap: Dp = 12.dp, onVerdictHelp: (() -> Unit)? = null) {
     Column(modifier.fillMaxWidth().testTag("signal-path"), verticalArrangement = Arrangement.spacedBy(gap)) {
         if (path == null) {
             Verdict("nothing playing", Room.Faint, onVerdictHelp)
@@ -241,7 +241,7 @@ internal fun SignalChain(path: SignalPath?, modifier: Modifier = Modifier, gap: 
             else -> Room.Warning
         }
         Verdict(path.verdict.lowercase(), lamp, onVerdictHelp)
-        Column(Modifier.fillMaxWidth().padding(top = 11.dp)) {
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
             StepRow("Track", path.track, first = true)
             StepRow("Sonic", path.runout)
             StepRow("Output", path.output, last = true)
@@ -254,9 +254,9 @@ internal fun SignalChain(path: SignalPath?, modifier: Modifier = Modifier, gap: 
 @Composable
 private fun Verdict(text: String, lamp: Color, onHelp: (() -> Unit)?) {
     Row(
-        Modifier.fillMaxWidth().background(Room.Surface).padding(11.dp),
+        Modifier.fillMaxWidth().background(Room.Surface).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(10.dp).background(lamp))
         BasicText(text, style = Room.Text.copy(lineHeight = 17.sp), modifier = Modifier.weight(1f).testTag("signal-verdict"))
@@ -272,21 +272,21 @@ private fun Verdict(text: String, lamp: Color, onHelp: (() -> Unit)?) {
  */
 @Composable
 private fun StepRow(kicker: String, step: SignalPath.Step, first: Boolean = false, last: Boolean = false) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 11.dp)) {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.width(10.dp).fillMaxHeight().rail(top = !first, bottom = !last), contentAlignment = Alignment.Center) {
                 Box(Modifier.size(10.dp).background(if (step.ok) Room.Ink else Room.Warning))
             }
             BasicText(step.title.lowercase(), style = Room.Strong, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             BasicText(step.spec.lowercase(), style = Room.Label, maxLines = 1, modifier = Modifier.testTag("spec:$kicker"))
         }
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.width(10.dp).fillMaxHeight().rail(top = !last, bottom = !last))
-            if (step.ok) Spacer(Modifier.weight(1f).height(if (last) 0.dp else 22.dp))
+            if (step.ok) Spacer(Modifier.weight(1f).height(if (last) 0.dp else 24.dp))
             else BasicText(
                 step.detail.lowercase(),
                 style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
-                modifier = Modifier.weight(1f).padding(top = 6.dp, bottom = if (last) 0.dp else 22.dp).testTag("why:$kicker"),
+                modifier = Modifier.weight(1f).padding(top = 8.dp, bottom = if (last) 0.dp else 24.dp).testTag("why:$kicker"),
             )
         }
     }
@@ -350,7 +350,7 @@ internal fun MiniToggle(label: String, checked: Boolean, onChange: (Boolean) -> 
             .touchHeight()
             .padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         BasicText(label.lowercase(), style = Room.Label.copy(color = if (checked) Room.Ink else Room.Quiet))
         Box(

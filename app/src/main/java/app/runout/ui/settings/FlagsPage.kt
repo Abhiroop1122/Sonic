@@ -130,7 +130,7 @@ private val HelpSleep = TeHelp("help · flags", "sleep mode", listOf(
 internal fun FlagsPage(state: RoomState, actions: RoomActions) {
     var help by remember { mutableStateOf<TeHelp?>(null) }
     val f = state.deckFlags
-    Column(Modifier.fillMaxWidth().testTag("panel:flags"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("panel:flags"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         PageSection("01 habits") {
             Column(Modifier.fillMaxWidth()) {
                 HelpToggle("Auto-flip", "Side A over, side B plays.", f.autoFlip, actions::setAutoFlip) { help = HelpAutoFlip }

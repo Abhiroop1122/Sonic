@@ -1,0 +1,1 @@
+A redline pass over every screen: one 4 dp rhythm so rows and sections line up, 11 sp as the smallest text, regular weight for names and album titles, sentence-case sheet and help titles, album names lowercase everywhere, and quieter captions.

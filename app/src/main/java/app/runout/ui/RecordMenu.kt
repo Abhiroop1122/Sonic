@@ -81,7 +81,7 @@ internal fun TeCard(tag: String, onDismiss: () -> Unit, content: @Composable Col
         )
         Column(
             Modifier
-                .padding(22.dp)
+                .padding(24.dp)
                 .widthIn(max = 420.dp)
                 .fillMaxWidth()
                 .background(Room.Background)
@@ -89,7 +89,7 @@ internal fun TeCard(tag: String, onDismiss: () -> Unit, content: @Composable Col
                 .pointerInput(Unit) { detectTapGestures { } }
                 // Taller than the screen (a phone on its side): the card scrolls inside its outline.
                 .verticalScroll(rememberScrollState())
-                .padding(22.dp)
+                .padding(24.dp)
                 .testTag(tag),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             content = content,
@@ -101,9 +101,9 @@ internal fun TeCard(tag: String, onDismiss: () -> Unit, content: @Composable Col
 @Composable
 private fun CardRecord(record: Album, artist: String, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        SleeveArt(record, Modifier.size(66.dp), showSticker = false)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            BasicText(record.title.uppercase(), style = Room.Album.copy(fontSize = 16.sp), maxLines = 2)
+        SleeveArt(record, Modifier.size(64.dp), showSticker = false)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BasicText(record.title.lowercase(), style = Room.Album.copy(fontSize = 16.sp), maxLines = 2)
             BasicText(artist.lowercase(), style = Room.Label.copy(color = Room.Body), maxLines = 1)
         }
     }
@@ -164,7 +164,7 @@ internal fun RecordDetails(
             }
         }
         val removable = record.source != Source.FOLDER
-        if (pulled || missing > 0 || removable) FlowRow(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+        if (pulled || missing > 0 || removable) FlowRow(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             if (pulled) TeLink("put back", onPutBack, tag = "details:put-back")
             if (missing > 0) TeLink(
                 if (missing == 1) "fetch missing track" else "fetch $missing missing tracks",
@@ -186,7 +186,7 @@ private val SHARE_MARK_WIDTH = 64.dp
 private fun RecordSheet(record: Album, capped: Boolean, modifier: Modifier = Modifier, headerEnd: Dp = 0.dp) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         CardRecord(record, listOfNotNull(record.artist, record.year?.toString()).joinToString(" · "), Modifier.padding(end = headerEnd))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SpecTag(record.quality.label)
             app.runout.model.Licences.label(record.license)?.let { TeTag(it.lowercase(), color = Room.Accent) }
         }
@@ -199,8 +199,8 @@ private fun RecordSheet(record: Album, capped: Boolean, modifier: Modifier = Mod
                 side.tracks.forEachIndexed { i, track ->
                     // An ink rule where a new side begins, hairlines between songs.
                     Row(
-                        Modifier.fillMaxWidth().hairlineTop(if (i == 0 && side.index > 0) Room.Ink else Room.HairlineSoft).padding(top = 11.dp, bottom = 11.dp, end = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(11.dp),
+                        Modifier.fillMaxWidth().hairlineTop(if (i == 0 && side.index > 0) Room.Ink else Room.HairlineSoft).padding(top = 12.dp, bottom = 12.dp, end = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         BasicText("${side.letter.lowercaseChar()}${i + 1}", style = Room.LabelQuiet)
                         BasicText(track.title.lowercase(), style = Room.Label, maxLines = 1, modifier = Modifier.weight(1f))
@@ -214,10 +214,10 @@ private fun RecordSheet(record: Album, capped: Boolean, modifier: Modifier = Mod
             Modifier
                 .fillMaxWidth()
                 .hairlineTop(Room.Ink)
-                .padding(top = 11.dp, end = 12.dp)
+                .padding(top = 12.dp, end = 12.dp)
                 .testTag("record-total")
                 .semantics(mergeDescendants = true) {},
-            horizontalArrangement = Arrangement.spacedBy(11.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             BasicText("total", style = Room.Label, modifier = Modifier.weight(1f))
             BasicText(runningTime(record.tracks.sumOf { it.durationMs.coerceAtLeast(0) }), style = Room.Label.copy(textAlign = TextAlign.End))
@@ -237,7 +237,7 @@ private fun ShareKey(modifier: Modifier = Modifier, onClick: () -> Unit) {
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onClick() },
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(20.dp)) {
+        Canvas(Modifier.size(16.dp)) {
             val k = size.width / 24f
             val s = Stroke(width = 1.8f * k, cap = StrokeCap.Round, join = StrokeJoin.Round)
             val box = Path().apply {

@@ -85,7 +85,7 @@ internal fun DiscoveryScreen(state: RoomState, actions: RoomActions, onAccount: 
     val submit = { if (discovery.query.trim().isNotEmpty()) actions.searchSoulseek(discovery.query) }
     val peers = remember(discovery.remote) { peerCounts(discovery.remote) }
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().testTag("screen:search"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        Column(Modifier.fillMaxSize().testTag("screen:search"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
             SearchField(
                 query = discovery.query,
                 onChange = actions::setSearchQuery,
@@ -177,7 +177,7 @@ private fun SearchKey(searching: Boolean, enabled: Boolean, onSearch: () -> Unit
             .testTag(if (searching) "stop-search" else "submit-search"),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(20.dp)) {
+        Canvas(Modifier.size(16.dp)) {
             if (searching) {
                 val s = size.width * 0.5f
                 drawRect(Room.OnInk, Offset((size.width - s) / 2, (size.height - s) / 2), Size(s, s))
@@ -210,7 +210,7 @@ internal fun <T> Segments(
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { tick(); onSelect(o) }
                     .semantics { this.selected = on }
                     .then(tag(o)?.let { Modifier.testTag(it) } ?: Modifier)
-                    .padding(vertical = 11.dp),
+                    .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 // On ink, the paper colour; on a signal colour, white in either theme.
@@ -252,8 +252,8 @@ private fun Digging(query: String, modifier: Modifier) {
 /** Soulseek is offline or signed out: a 10/400 line and the key that connects. */
 @Composable
 private fun SignedOutNote(session: SoulseekSession, actions: RoomActions, onAccount: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-        val line = if (session.hasAccount) session.error ?: "your account is kept. reconnect to search online." else "sign in to soulseek to dig its album folders."
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val line = if (session.hasAccount) session.error ?: "your account is kept. reconnect to search online." else "sign in to soulseek to dig its album folders"
         BasicText(line, style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp))
         TeButton(
             if (session.hasAccount) "reconnect soulseek" else "connect soulseek",
@@ -269,8 +269,8 @@ private fun SignedOutNote(session: SoulseekSession, actions: RoomActions, onAcco
 private fun LocalResults(discovery: DiscoveryState, actions: RoomActions, onCue: () -> Unit, modifier: Modifier) {
     val albums = discovery.local.filter { it.track == null }.ifEmpty { discovery.local.distinctBy { it.album.id }.map { it.copy(track = null) } }
     Column(modifier.fillMaxWidth()) {
-        BasicText("on this device · ${plural(albums.size, "album")}", style = Room.LabelQuiet, modifier = Modifier.padding(bottom = 22.dp))
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("local-results"), contentPadding = PaddingValues(bottom = 22.dp)) {
+        BasicText("on this device · ${plural(albums.size, "album")}", style = Room.LabelQuiet, modifier = Modifier.padding(bottom = 24.dp))
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("local-results"), contentPadding = PaddingValues(bottom = 24.dp)) {
             items(albums, key = { "local:${it.id}" }) { hit -> LocalAlbumCard(hit, actions, onCue) }
             if (albums.isEmpty()) item("no-local") {
                 BasicText("no albums here match. try fewer words, or dig on soulseek.", style = Room.Label.copy(color = Room.Body))
@@ -299,7 +299,7 @@ private fun LocalAlbumCard(hit: LocalMatch, actions: RoomActions, onCue: () -> U
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         SleeveArt(hit.album, Modifier.size(88.dp), showSticker = false)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             BasicText(hit.album.title.lowercase(), style = Room.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             BasicText(hit.album.artist.lowercase(), style = Room.Label.copy(color = Room.Body), maxLines = 1, overflow = TextOverflow.Ellipsis)
             TeTag(spec, color = if (quality.isHiRes) Room.Signal else Room.Ink)
@@ -335,7 +335,7 @@ private fun RemoteResults(
     modifier: Modifier,
 ) {
     Column(modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 BasicText("soulseek · ${plural(discovery.remote.size, "album folder")}", style = Room.LabelQuiet, modifier = Modifier.weight(1f))
                 // The "?" box sits in a 32 dp touch target: 8 dp of it are already the gap.
@@ -350,7 +350,7 @@ private fun RemoteResults(
             )
             val retry = discovery.online.phase in setOf(SearchPhase.FAILED, SearchPhase.INTERRUPTED)
             val broaden = discovery.remote.isEmpty() && discovery.online.phase == SearchPhase.COMPLETE
-            if (retry || broaden) Row(Modifier.padding(top = 5.dp), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+            if (retry || broaden) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (retry) TeButton("retry search", submit, kind = KeyKind.OUTLINE, enabled = connected)
                 if (broaden) TeButton("broaden search terms", actions::broadenSearch, kind = KeyKind.OUTLINE)
             }
@@ -359,7 +359,7 @@ private fun RemoteResults(
             Digging(discovery.online.query, Modifier.weight(1f))
         } else {
             // Room under the last row for the floating 66 dp "sort" key and its 22 dp gap, so it never covers the last size.
-            LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("remote-results"), contentPadding = PaddingValues(bottom = 66.dp + 22.dp)) {
+            LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("remote-results"), contentPadding = PaddingValues(bottom = 64.dp + 24.dp)) {
                 itemsIndexed(discovery.remote, key = { _, it -> "folder:${it.id}" }) { i, group ->
                     val (count, free) = peers[folderKey(group.directory)] ?: (1 to group.available)
                     RemoteAlbumCard(i + 1, group, count, free, enabled = connected) { actions.previewSoulseekFolder(group.tracks.first()) }
@@ -385,15 +385,15 @@ private fun RemoteAlbumCard(index: Int, group: RemoteAlbum, peers: Int, free: Bo
             .hairlineTop()
             .clickable(enabled = enabled, interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onPreview() }
             .testTag("preview-folder:${group.id}")
-            .padding(vertical = 11.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(Modifier.fillMaxWidth().padding(end = 12.dp), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
-            BasicText("%02d".format(index), style = Room.LabelQuiet, modifier = Modifier.width(22.dp))
+        Row(Modifier.fillMaxWidth().padding(end = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            BasicText("%02d".format(index), style = Room.LabelQuiet, modifier = Modifier.width(24.dp))
             BasicText(group.album.lowercase(), style = Room.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             BasicText(sizeLabel(group.bytes), style = Room.Label.copy(textAlign = TextAlign.End), maxLines = 1, modifier = Modifier.width(64.dp))
         }
-        Row(Modifier.fillMaxWidth().padding(start = 33.dp, end = 12.dp), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = 32.dp, end = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             group.parent?.let { BasicText(it.lowercase(), style = Room.Label.copy(color = Room.Body), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 120.dp)) }
             BasicText(
                 listOfNotNull(qualityShort(group.bits, group.rate), plural(group.tracks.size, "track")).joinToString(" · "),
@@ -418,7 +418,7 @@ private fun PeerMarks(group: RemoteAlbum, peers: Int, free: Boolean, modifier: M
     ).joinToString(", ")
     Row(
         modifier.semantics(mergeDescendants = true) { contentDescription = words },
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(6.dp).background(if (free) Room.Online else Room.Faint))
@@ -438,7 +438,7 @@ internal fun GeneratedSleeve(title: String, artist: String?, modifier: Modifier 
             title.take(18).uppercase(),
             style = Room.Label.copy(fontSize = 6.5.sp, letterSpacing = 0.6.sp, color = Color.White.copy(alpha = 0.92f), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
             maxLines = 3,
-            modifier = Modifier.padding(5.dp),
+            modifier = Modifier.padding(4.dp),
         )
     }
 }
@@ -452,15 +452,15 @@ private fun FiltersKey(modifier: Modifier, onClick: () -> Unit) {
     val tick = rememberTick()
     Column(
         modifier
-            .size(66.dp)
+            .size(64.dp)
             .background(Room.Ink)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) { tick(); onClick() }
             .semantics(mergeDescendants = true) { contentDescription = "Filters and sort" }
             .testTag("search-filters"),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
     ) {
-        Canvas(Modifier.size(20.dp)) { drawNavIcon(Panel.SETTINGS, Room.OnInk) }
+        Canvas(Modifier.size(16.dp)) { drawNavIcon(Panel.SETTINGS, Room.OnInk) }
         BasicText("sort", style = Room.Label.copy(color = Room.OnInk))
     }
 }
@@ -469,11 +469,11 @@ private fun FiltersKey(modifier: Modifier, onClick: () -> Unit) {
 @Composable
 private fun FiltersCard(options: DiscoveryOptions, actions: RoomActions, onHelp: () -> Unit, onDismiss: () -> Unit) {
     PageSheet("search-filter-card", onDismiss, title = "filters & sort") {
-        Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             BasicText("sort", style = Room.LabelQuiet)
             Segments(listOf(SearchSort.MATCH, SearchSort.QUALITY, SearchSort.AVAILABILITY), options.sort, ::sortLabel) { actions.setSearchOptions(options.copy(sort = it)) }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             BasicText("reported flac quality", style = Room.LabelQuiet)
             Segments(SearchQuality.entries, options.quality, ::qualityLabel) { actions.setSearchOptions(options.copy(quality = it)) }
         }
@@ -512,9 +512,9 @@ private fun FreeSlotsRow(checked: Boolean, onChange: (Boolean) -> Unit, onHelp: 
             .testTag("toggle:$title")
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BasicText(title.lowercase(), style = Room.Text)
                 InfoDot(title, onHelp)
@@ -577,12 +577,12 @@ internal fun FolderPreview(preview: SoulseekFolderPreview, state: RoomState, act
     val aimAt = shelf?.takeIf { it.source == app.runout.model.Source.SOULSEEK }?.id
     val missing = preview.files.filter { states[it.id]?.first == FileState.MISSING || states[it.id]?.first == FileState.BROKEN }
     val canGet = ready && state.downloadFolder != null && state.soulseekSession.connected
-    Column(Modifier.fillMaxSize().testTag("screen:folder-preview"), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+    Column(Modifier.fillMaxSize().testTag("screen:folder-preview"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         BackLink(actions::closeSoulseekFolder)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             GeneratedSleeve(album, artist, Modifier.size(110.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                BasicText(album.uppercase(), style = Room.Heading.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, lineHeight = 19.sp), maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                BasicText(album.lowercase(), style = Room.Heading.copy(lineHeight = 19.sp), maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
                 artist?.let { BasicText(it.lowercase(), style = Room.Label.copy(color = Room.Body), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 if (!preview.loading && preview.files.isNotEmpty()) {
                     TeTag(
@@ -614,11 +614,11 @@ internal fun FolderPreview(preview: SoulseekFolderPreview, state: RoomState, act
             itemsIndexed(preview.files, key = { _, f -> f.id }) { i, file ->
                 val (number, title) = cleanTrackName(file.fileName, folder, artist, i + 1)
                 Row(
-                    Modifier.fillMaxWidth().hairlineTop(Room.HairlineSoft).padding(top = 11.dp, bottom = 11.dp, end = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(11.dp),
+                    Modifier.fillMaxWidth().hairlineTop(Room.HairlineSoft).padding(top = 12.dp, bottom = 12.dp, end = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     BasicText(number, style = Room.LabelQuiet, modifier = Modifier.width(20.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         BasicText(title.lowercase(), style = Room.Label, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         // Only a track that differs from the album says what it is.
                         if ((file.bitDepth != null && file.bitDepth != bits) || (file.sampleRate != null && file.sampleRate != rate)) {
@@ -630,7 +630,7 @@ internal fun FolderPreview(preview: SoulseekFolderPreview, state: RoomState, act
                 }
             }
         }
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (state.downloadFolder == null) TeButton("choose download folder", actions::pickDownloadFolder, Modifier.fillMaxWidth(), kind = KeyKind.OUTLINE)
             else BasicText(
                 when {
@@ -777,7 +777,7 @@ private fun MessageKey(enabled: Boolean, onClick: () -> Unit) {
             .testTag("message-peer"),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(14.dp)) { drawNavIcon(Panel.FRIENDS, if (enabled) Room.Ink else Room.Faint) }
+        Canvas(Modifier.size(16.dp)) { drawNavIcon(Panel.FRIENDS, if (enabled) Room.Ink else Room.Faint) }
     }
 }
 
