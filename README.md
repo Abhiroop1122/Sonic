@@ -26,6 +26,10 @@
   &nbsp;·&nbsp; <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+<p align="center">
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Abhiroop1122/Sonic"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="54" /></a>
+</p>
+
 ## Our Vision.
 
 *Music is one search away now. Type a name and the song plays, then the next one, then the next. It’s effortless, which is exactly why it never feels like a collection. When everything is instant, you lose the weight of an album: the effort it took to track it down, the choice to commit to the highest audio quality, and the feeling of actually owning the music.*
@@ -167,6 +171,24 @@ shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
 - Sonic installs as its own app (`app.sonic`). If you used Runout, it stays where it is; Sonic
   doesn't replace it or read its data.
 - No account needed to listen. Skip sign-in and Sonic plays the folder you give it.
+
+### Keep it up to date
+
+Both of these install the same APK as the release above, so you can switch between them without
+reinstalling.
+
+- **Obtainium.** Tap the badge at the top, or add `https://github.com/Abhiroop1122/Sonic` in
+  [Obtainium](https://github.com/ImranR98/Obtainium). It installs each new release from here.
+- **F-Droid, Droid-ify or Neo Store.** Open https://somchandra17.github.io/sonic-fdroid on your
+  phone and tap *Add to F-Droid*, or add the repository by hand:
+
+  ```
+  https://somchandra17.github.io/sonic-fdroid/repo
+  Fingerprint: C482BF3B0848C66DD63E0194711A3DC800487D908D6008A66A124B7E16A91E6B
+  ```
+
+  Sonic isn't in F-Droid's own catalogue: F-Droid builds apps from public source, and the font
+  Sonic is set in may be shipped inside the app but not published.
 
 ### Soulseek, in plain words
 
