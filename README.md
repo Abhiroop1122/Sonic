@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Abhiroop1122/Sonic/releases/latest"><b>Download Sonic 1.1.0</b></a>
+  <a href="https://github.com/Abhiroop1122/Sonic/releases/latest"><b>Download Sonic 1.4.2</b></a>
   &nbsp;·&nbsp; <a href="#what-it-does">What it does</a>
   &nbsp;·&nbsp; <a href="#build-it">Build it</a>
   &nbsp;·&nbsp; <a href="CHANGELOG.md">Changelog</a>
@@ -28,7 +28,7 @@
 
 ## Our Vision.
 
-*Music is one search away now. Type a name and the song plays, then the next one, then the next. It’s effortless, which is exactly why it never feels like a collection. When everything is instant, you lose the weight of an album-the effort it took to track it down, the choice to commit to the highest audio quality, and the feeling of actually owning the music.*
+*Music is one search away now. Type a name and the song plays, then the next one, then the next. It’s effortless, which is exactly why it never feels like a collection. When everything is instant, you lose the weight of an album: the effort it took to track it down, the choice to commit to the highest audio quality, and the feeling of actually owning the music.*
 
 *It used to take intention. Records piled up next to the turntable, and you flipped through them until one fit the evening. You slid the disc out of its sleeve, set the needle down, and got up to turn it over when Side A ended. You knew your records because you had handled every single one.*
 
@@ -155,12 +155,12 @@ choose, where they stay if you uninstall Sonic.
 
 ## Get it
 
-Download `Sonic-1.1.0.apk` from the [latest release](https://github.com/Abhiroop1122/Sonic/releases/latest)
+Download `Sonic-1.4.2.apk` from the [latest release](https://github.com/Abhiroop1122/Sonic/releases/latest)
 and check it against its checksum:
 
 ```bash
-sha256sum -c Sonic-1.1.0.apk.sha256        # Linux
-shasum -a 256 -c Sonic-1.1.0.apk.sha256    # macOS
+sha256sum -c Sonic-1.4.2.apk.sha256        # Linux
+shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
 ```
 
 - Android 9 or newer, on ARM64, ARMv7, x86-64 or x86.
