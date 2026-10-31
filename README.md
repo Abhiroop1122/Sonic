@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/Abhiroop1122/Sonic/releases/latest"><img src="https://img.shields.io/github/v/release/Abhiroop1122/Sonic?label=release&color=F05A24" alt="Latest release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Abhiroop1122/Sonic?label=licence&color=111111" alt="MIT licence" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Abhiroop1122/Sonic?label=licence&color=111111&cacheSeconds=86400" alt="MIT licence" /></a>
   <img src="https://img.shields.io/badge/Android-9%2B-111111?logo=android&logoColor=white" alt="Android 9 or newer" />
   <img src="https://img.shields.io/badge/FLAC-only-111111" alt="FLAC only" />
 </p>
