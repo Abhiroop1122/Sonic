@@ -19,29 +19,38 @@
   <img src="https://img.shields.io/badge/FLAC-only-111111" alt="FLAC only" />
 </p>
 
-<p align="center">
-  <a href="https://github.com/Abhiroop1122/Sonic/releases/latest"><b>Download Sonic 1.4.2</b></a>
-  &nbsp;·&nbsp; <a href="#what-it-does">What it does</a>
-  &nbsp;·&nbsp; <a href="#build-it">Build it</a>
-  &nbsp;·&nbsp; <a href="CHANGELOG.md">Changelog</a>
-</p>
+## Get it
+
+**[Download Sonic 1.4.2](https://github.com/Abhiroop1122/Sonic/releases/latest)**: open `Sonic-1.4.2.apk` on your phone and allow the install. Android 9 or newer, no account needed to listen.
+
+For updates without coming back here, add Sonic to F-Droid (or Droid-ify, Neo Store) or Obtainium. Both install this same APK, so you can switch between them.
 
 <p align="center">
   <a href="https://somchandra17.github.io/sonic-fdroid"><img src="https://img.shields.io/badge/F--Droid-add_the_repo-1976D2?style=for-the-badge&logo=fdroid&logoColor=white" alt="Add the Sonic repository to F-Droid" height="40" /></a>
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Abhiroop1122/Sonic"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="40" /></a>
 </p>
 
-## Our Vision.
+<details>
+<summary>Check the download, or add the F-Droid repository by hand</summary>
 
-*Music is one search away now. Type a name and the song plays, then the next one, then the next. It’s effortless, which is exactly why it never feels like a collection. When everything is instant, you lose the weight of an album: the effort it took to track it down, the choice to commit to the highest audio quality, and the feeling of actually owning the music.*
+```bash
+sha256sum -c Sonic-1.4.2.apk.sha256        # Linux
+shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
+```
 
-*It used to take intention. Records piled up next to the turntable, and you flipped through them until one fit the evening. You slid the disc out of its sleeve, set the needle down, and got up to turn it over when Side A ended. You knew your records because you had handled every single one.*
+```
+https://somchandra17.github.io/sonic-fdroid/repo
+Fingerprint: C482BF3B0848C66DD63E0194711A3DC800487D908D6008A66A124B7E16A91E6B
+```
 
-*Sonic brings that ritual back to your phone. If you want any song in two seconds, a streaming app will serve you better. Sonic is built for downloading, keeping, and truly listening to FLAC albums only.*
+The APK runs on ARM64, ARMv7, x86-64 and x86. Sonic isn't in F-Droid's own catalogue: F-Droid builds apps from public source, and the font Sonic is set in may ship inside the app but not be published.
+</details>
 
-*Each album in Sonic lives as a record in your crate, with its sides and resolution printed right on the sleeve. Pull it out, drop it on the platter, play Side A, and flip it for Side B. Under the hood, it delivers the exact pipeline an audiophile actually needs with nothing bloated on top: lossless decoding, hi-res playback at native sample rates, a Pure Mode that leaves samples untouched, and a transparent signal path that exposes when your OS resamples or Bluetooth (LDAC/AAC) compresses versus wired USB-C DAC playback.*
-
-*To grow your crate, Sonic searches Soulseek for full releases, delivers ten curated Creative Commons albums from the Internet Archive every Friday, and lets friends hand you a record as an interactive card in chat.*
+<p align="center">
+  <a href="#what-it-does">What it does</a>
+  &nbsp;·&nbsp; <a href="#build-it">Build it</a>
+  &nbsp;·&nbsp; <a href="CHANGELOG.md">Changelog</a>
+</p>
 
 <p align="center">
   <img src="docs/images/screens/room-light.png" width="260" alt="The room in light: a white and teal turntable playing Paper Moons above a crate of sleeves, the track list below" />
@@ -78,8 +87,7 @@ Turn the phone sideways and the room fills the screen. Sideways is just for list
 pages wait until you turn it back.
 
 <p align="center">
-  <img src="docs/images/screens/land-light.png" width="49%" alt="Sideways in light: the white and teal deck on the left, the crate and track list on the right" />
-  <img src="docs/images/screens/land-dark.png" width="49%" alt="Sideways in dark: the dark deck on the left, the crate on the right, all on black" />
+  <img src="docs/images/screens/landscape-demo.webp" width="100%" alt="Sonic sideways on a phone: the neon deck plays alone in vinyl-only mode, a tap brings the crate back, records are swapped on the platter, then the audio quality panel and a record's details" />
 </p>
 
 ### Collect
@@ -158,39 +166,6 @@ FLAC is the rule everywhere: scanning, downloads, sharing and playback. An MP3 r
 doesn't get in. Your music folder is only read, never changed, and downloads land in a folder you
 choose, where they stay if you uninstall Sonic.
 
-## Get it
-
-Download `Sonic-1.4.2.apk` from the [latest release](https://github.com/Abhiroop1122/Sonic/releases/latest)
-and check it against its checksum:
-
-```bash
-sha256sum -c Sonic-1.4.2.apk.sha256        # Linux
-shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
-```
-
-- Android 9 or newer, on ARM64, ARMv7, x86-64 or x86.
-- Sonic installs as its own app (`app.sonic`). If you used Runout, it stays where it is; Sonic
-  doesn't replace it or read its data.
-- No account needed to listen. Skip sign-in and Sonic plays the folder you give it.
-
-### Keep it up to date
-
-Both of these install the same APK as the release above, so you can switch between them without
-reinstalling.
-
-- **Obtainium.** Tap its badge at the top, or add `https://github.com/Abhiroop1122/Sonic` in
-  [Obtainium](https://github.com/ImranR98/Obtainium). It installs each new release from here.
-- **F-Droid, Droid-ify or Neo Store.** Tap the F-Droid badge at the top (or open
-  https://somchandra17.github.io/sonic-fdroid) on your phone, then *Add to F-Droid*, or add the repository by hand:
-
-  ```
-  https://somchandra17.github.io/sonic-fdroid/repo
-  Fingerprint: C482BF3B0848C66DD63E0194711A3DC800487D908D6008A66A124B7E16A91E6B
-  ```
-
-  Sonic isn't in F-Droid's own catalogue: F-Droid builds apps from public source, and the font
-  Sonic is set in may be shipped inside the app but not published.
-
 ### Soulseek, in plain words
 
 Soulseek has no sign-up page: the first time you sign in with a new name, that name becomes your
@@ -220,10 +195,10 @@ cargo +1.91.0 test --manifest-path native/Cargo.toml --workspace --lib --locked
 
 A debug build installs as **Sonic. Dev** (`app.sonic.dev`) next to the release. Tests run on
 local fixtures and test servers; the integration test talks to two local Soulseek peers and never
-creates a public account. The screenshots above come from an emulator with a made-up library.
+creates a public account. The screenshots above come from an emulator with a made-up library; the sideways demo is a real phone.
 
 ```text
-app/src/main/java/app/runout/   the app (the package keeps its old name)
+app/src/main/java/app/runout/   the app
   library/   scanning, the shelf, covers, storage
   playback/  the deck and the playback service
   soulseek/  the bridge, downloads, sign-in
@@ -260,7 +235,7 @@ release/     release notes, checksums, verification reports
 | [0.6.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.6.0-dev.1) | Development | The RG-1 3D turntable, rendered with Filament. |
 | [0.5.1](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.5.1) | Release | Soulseek and FLAC, the redesigned room. |
 | [0.4.0 – 0.5.0](https://github.com/Abhiroop1122/Sonic/releases) | Development | Each step kept as a pre-release. |
-| [0.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.3.0) | Release | The Glass Turntable, as Runout. |
+| [0.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v0.3.0) | Release | The Glass Turntable. |
 
 ## Contributing
 
@@ -302,5 +277,3 @@ texts ship inside the APK.
   [Internet Archive](https://archive.org), only when you turn cover lookup on or open Friday Drops.
   Drops keep their Creative Commons licences and credits. Music you download from Soulseek isn't
   marked as openly licensed.
-
-Sonic was called Runout until 1.0.0.
