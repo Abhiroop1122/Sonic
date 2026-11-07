@@ -53,17 +53,9 @@ The APK runs on ARM64, ARMv7, x86-64 and x86. Sonic isn't in F-Droid's own catal
 </p>
 
 <p align="center">
-  <img src="docs/images/screens/room-light.png" width="260" alt="The room in light: a white and teal turntable playing Paper Moons above a crate of sleeves, the track list below" />
-  &nbsp;
-  <img src="docs/images/screens/room-mono.png" width="260" alt="The same room with the mono white turntable" />
-  &nbsp;
-  <img src="docs/images/screens/room-dark.png" width="260" alt="The room in dark: a black turntable on a true-black screen, the same crate and sleeves" />
-</p>
-
-<p align="center">
-  <img src="docs/images/screens/intro-light.gif" width="240" alt="The intro in light: the cream SONIC sleeve slides in, its record flies onto the turntable and SONIC. types out" />
+  <img src="docs/images/screens/room-light.png" width="300" alt="The room in light: a white and teal turntable playing Paper Moons above a crate of sleeves, the track list below" />
   &nbsp;&nbsp;
-  <img src="docs/images/screens/intro-dark.gif" width="240" alt="The intro in dark: the black SONIC sleeve, the dark turntable and SONIC. on true black" />
+  <img src="docs/images/screens/room-dark.png" width="300" alt="The room in dark: a black turntable on a true-black screen, the same crate and sleeves" />
 </p>
 
 ## What it does
