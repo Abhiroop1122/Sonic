@@ -102,7 +102,7 @@ internal object SoundHelp {
     ))
     val VERDICT = TeHelp("help · sound › signal", "the signal verdict", listOf(
         "one line on what reaches your ears: the track, what sonic does to it, and what the output takes.",
-        "green: bit-perfect, nothing changed. amber: a lossless source, but resampled, processed or cut to 16-bit on the way. red: lossy, because bluetooth re-encodes the music.",
+        "green: bit-perfect, nothing changed. amber: a lossless source, but resampled, processed or cut to 16-bit on the way. red: lossy, because the file is mp3 or bluetooth re-encodes the music.",
         "hold the deck's led window to see this chain from the room.",
     ))
     val EQ = TeHelp("help · sound › equaliser", "eq", listOf(

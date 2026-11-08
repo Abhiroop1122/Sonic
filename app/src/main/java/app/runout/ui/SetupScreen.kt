@@ -498,7 +498,7 @@ private fun SoulseekIdHelp(onDismiss: () -> Unit) {
 @Composable
 private fun OfflineStep(state: RoomState, actions: RoomActions, onDone: () -> Unit, onBack: () -> Unit) {
     StepPage(2, onBack, picture = "step-02", copy = {
-        StepCopy("offline · no account needed", "BRING YOUR OWN RECORDS", "choose a folder of flac albums. you can connect soulseek later from settings › soulseek.")
+        StepCopy("offline · no account needed", "BRING YOUR OWN RECORDS", "choose a folder of ${if (state.mp3Local) "flac or mp3" else "flac"} albums. you can connect soulseek later from settings › soulseek.")
         if (state.hasFolder) BasicText("music folder selected. your records will appear in the crate.", style = Room.Label.copy(color = Room.Body))
     }) {
         StepKey(if (state.hasFolder) "change music folder" else "choose music folder", actions::pickFolder, "setup-local-folder", Modifier.fillMaxWidth())

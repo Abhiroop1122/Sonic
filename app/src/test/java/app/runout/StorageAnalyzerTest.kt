@@ -57,7 +57,10 @@ class StorageAnalyzerTest {
         assertEquals(75_000_000L, f.byKind[StorageKind.FLAC_CD])
         assertEquals(120_000_000L, f.byKind[StorageKind.FLAC_HI_RES])
         assertEquals(9_000_000L, f.byKind[StorageKind.PARTIAL])
-        assertEquals(8_000_000L, f.byKind[StorageKind.OTHER_AUDIO])
+        // MP3 is its own kind now, right after the FLAC, and still part of its folder's record.
+        assertEquals(8_000_000L, f.byKind[StorageKind.MP3])
+        assertEquals(null, f.byKind[StorageKind.OTHER_AUDIO])
+        assertEquals(listOf(StorageKind.FLAC_HI_RES, StorageKind.FLAC_CD, StorageKind.MP3), StorageKind.entries.take(3))
         assertEquals(500_000L, f.byKind[StorageKind.PICTURES])
         assertEquals(1_000L, f.byKind[StorageKind.OTHER])
         assertEquals(listOf("Night Drive", "Moon Safari"), f.largest.map { it.title })

@@ -171,6 +171,24 @@ class SoulseekRepositoryTest {
         assertNull(repo.searchResults.value.single().bitDepth)
     }
 
+    @Test fun `MP3 in your folder leaves dig FLAC only, MP3 results are ignored and never downloaded`() = runBlocking {
+        Fixtures.context.getSharedPreferences(app.runout.library.LibraryRepository.MP3_PREFS, 0).edit()
+            .putBoolean(app.runout.library.LibraryRepository.KEY_MP3, true).commit()
+        login(); destination()
+        repo.search("Paper Moons").join()
+        val id = transport.commands.last { it.optString("op") == "search" }.getString("id")
+        fun result(path: String) = JSONObject().put("type", "search_result").put("id", id)
+            .put("username", "maya").put("path", path).put("size", 66089L)
+        transport.emit(result("Album\\01 Paper Moons.mp3"))
+        transport.emit(result("Album\\01 Paper Moons.flac"))
+        transport.emit(JSONObject().put("type", "search_done").put("id", id))
+        await("search completed") { !repo.searching.value }
+        assertEquals(listOf("01 Paper Moons.flac"), repo.searchResults.value.map { it.fileName })
+        repo.download(SoulseekSearchResult("maya", "Album\\01 Paper Moons.mp3", 66089L)).join()
+        assertTrue(transport.commands.none { it.optString("op") == "download" })
+        assertTrue(repo.transfers.value.isEmpty())
+    }
+
     @Test fun `completed FLAC publishes to selected folder and remains after logout`() = runBlocking {
         login(); val folder = destination()
         transport.onCommand = { command ->

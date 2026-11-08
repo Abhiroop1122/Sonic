@@ -116,6 +116,12 @@ private val HelpVinylOnly = TeHelp("help · flags", "vinyl only", listOf(
     "on an oled screen black pixels are off, so a phone left playing uses less battery. tap anywhere to bring the room back; it goes dark again after ten quiet seconds.",
 ))
 
+private val HelpMp3 = TeHelp("help · flags", "mp3 in your folder", listOf(
+    "plays the mp3 files in your music folder too: each album folder of them becomes a record.",
+    "mp3 is lossy, so its record is pressed black and is never hi-res. the signal says lossy, never bit-perfect or lossless.",
+    "it's never shared, uploaded or found through dig. those stay flac.",
+))
+
 private val HelpSleep = TeHelp("help · flags", "sleep mode", listOf(
     "puts a moon in the room's top bar. tap it to stop the music in 15 to 50 minutes.",
     "when the time is up the music fades out over a few seconds and the needle lifts.",
@@ -137,6 +143,7 @@ internal fun FlagsPage(state: RoomState, actions: RoomActions) {
                 HelpToggle("Auto-play", "A record on the platter starts playing.", f.autoPlay, actions::setAutoPlay) { help = HelpAutoPlay }
                 HelpToggle("Sleep mode", "A moon in the room for the sleep timer.", f.sleepMode, actions::setSleepMode) { help = HelpSleep }
                 HelpToggle("Intro on launch", "The needle drop, each time sonic opens.", state.look.introOnLaunch, actions::setIntroOnLaunch) { help = HelpIntro }
+                HelpToggle("MP3 in your folder", "MP3s in your music folder play too, as lossy records.", state.mp3Local, actions::setMp3Local) { help = HelpMp3 }
             }
         }
         PageSection("02 theme") {

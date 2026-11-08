@@ -201,6 +201,8 @@ data class RoomState(
     val onboardingStep: Int = 0,
     val coverLookupEnabled: Boolean = false,
     val coverLookupNoticePending: Boolean = false,
+    /** Settings › Flags › MP3 in your folder: MP3 files in the music folder are records too. */
+    val mp3Local: Boolean = false,
     /** Asked once after the first Soulseek album: share the download folder? */
     val soulseekShareOffer: Boolean = false,
     /** Whether the router forwards Sonic's port (Settings › Soulseek). */
@@ -251,6 +253,8 @@ interface RoomActions : DeckActions {
     /** Settings › Library › Repair local albums: rebuild the shelf from the folder alone. */
     fun repairLibrary() { rescan() }
     fun setCoverLookupEnabled(enabled: Boolean) {}
+    /** Settings › Flags › MP3 in your folder. */
+    fun setMp3Local(on: Boolean) {}
     fun answerShareOffer(share: Boolean) {}
     fun dismissCoverLookupNotice() {}
     fun load(album: Album)
@@ -1511,7 +1515,7 @@ private fun emptyTitle(state: RoomState): String = when {
 }
 
 private fun emptyDetail(state: RoomState): String = when {
-    !state.hasFolder -> "each album folder becomes a record on your shelf. flac only. nothing leaves your phone."
+    !state.hasFolder -> "each album folder becomes a record on your shelf. ${if (state.mp3Local) "flac and mp3." else "flac only."} nothing leaves your phone."
     state.scan is ScanState.Scanning -> (state.scan as ScanState.Scanning).progress.let { "${it.folders} folders · ${it.audioFiles} music files so far" }
     state.report != null -> state.report.summary.lowercase() + " pick another folder to try again."
     else -> "pick another folder to try again."

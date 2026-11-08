@@ -8,6 +8,7 @@ import app.runout.ui.Look
 import app.runout.ui.LookPreferences
 import app.runout.ui.Room
 import app.runout.ui.ThemeMode
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
@@ -55,6 +56,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -393,6 +395,30 @@ class ListeningRoomUiTest {
     }
 
     @Test
+    fun `the flags page switches MP3 in your folder, off by default`() {
+        portrait()
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() {
+            override fun setMp3Local(on: Boolean) { calls += "mp3:$on" }
+        }
+        var s by mutableStateOf(state())
+        compose.setContent { RoomScreen(s, actions, initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.FLAGS) }
+        // The toggle sits low on the page; a semantics click, since a touch that far down lands off
+        // target under Robolectric here (see the two soulseek settings tests).
+        val toggle = compose.onNodeWithTag("toggle:MP3 in your folder").performScrollTo()
+        toggle.assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "Off"))
+        toggle.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        assertEquals(listOf("mp3:true"), calls)
+        s = s.copy(mp3Local = true)
+        compose.waitForIdle()
+        compose.onNodeWithTag("toggle:MP3 in your folder").performScrollTo()
+            .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "On"))
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        assertEquals(listOf("mp3:true", "mp3:false"), calls)
+        compose.onNodeWithTag("toggle:MP3 in your folder").assertTextContains("mp3 in your folder", substring = true)
+    }
+
+    @Test
     fun `sleep mode puts a moon in the top bar that sets the sleep timer`() {
         portrait()
         val set = mutableListOf<Int?>()
@@ -461,8 +487,9 @@ class ListeningRoomUiTest {
         }
         val s = state().copy(soulseekSession = SoulseekSession(SoulseekConnection.CONNECTED, "abhi", authenticated = true), soulseekShareConsent = true, soulseekWaitingForWifi = true)
         compose.setContent { RoomScreen(s, actions, initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.ACCOUNT) }
-        compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().performClick()
-        compose.onNodeWithTag("upload-slots:3").performScrollTo().performClick()
+        // Semantics clicks: this far down the page a touch lands off target under Robolectric.
+        compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.onNodeWithTag("upload-slots:3").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         assertEquals(listOf("wifi:false", "slots:3"), calls)
         compose.onNodeWithTag("sharing-waiting-wifi").performScrollTo().assertIsDisplayed()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/soulseek_upload_settings.png")
@@ -910,7 +937,8 @@ class ListeningRoomUiTest {
         compose.onNodeWithText("04 in the background").assertExists()
         compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().assertIsNotEnabled().performClick()
         compose.onNodeWithTag("upload-slots:3").performScrollTo().performClick()
-        compose.onNodeWithTag("settings-turtle").performScrollTo().performClick()
+        // A semantics click: after scrolling, a touch lands off target under Robolectric.
+        compose.onNodeWithTag("settings-turtle").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         assertEquals(listOf("turtle:true"), calls)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/soulseek_settings.png")
     }

@@ -258,7 +258,7 @@ private fun summary(s: SettingsSection, state: RoomState): String = when (s) {
     SettingsSection.LIBRARY -> "${recordCount(state.albums.size)} · ${if (state.hasFolder) "1 folder" else "no folder"}"
     SettingsSection.FLAGS -> listOfNotNull(
         "auto-flip".takeIf { state.deckFlags.autoFlip }, "auto-play".takeIf { state.deckFlags.autoPlay }, "sleep".takeIf { state.deckFlags.sleepMode },
-        "intro".takeIf { state.look.introOnLaunch },
+        "intro".takeIf { state.look.introOnLaunch }, "mp3".takeIf { state.mp3Local },
     ).joinToString(" · ").ifEmpty { "all off" } + (if (state.look.theme != ThemeMode.PHONE) " · ${state.look.theme.label}" else "")
     SettingsSection.ABOUT -> "sonic $VERSION · " +
         ((state.update as? UpdateState.Available)?.let { "${it.release.version} is out" } ?: "rg-1")
@@ -291,7 +291,7 @@ private fun LibraryPage(state: RoomState, actions: RoomActions) {
         )
         state.report?.let { r ->
             if (r.error != null) BasicText(r.summary.lowercase(), style = Room.Label.copy(color = Room.Danger, lineHeight = 15.sp))
-            else LibraryStats(r.albums, r.audioFiles, r.folders, r.unreadable)
+            else LibraryStats(r.albums, r.audioFiles, r.folders, r.unreadable, mp3 = r.mp3Files.takeIf { state.mp3Local })
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             // Change folder lives here now, not on the home screen.
@@ -350,11 +350,13 @@ private fun ShareSwapNote(shared: String?, actions: RoomActions) {
 
 /** The scan as a TE stats strip, ruled in ink above and below; unreadable files count in red. */
 @Composable
-private fun LibraryStats(albums: Int, files: Int, folders: Int, unreadable: Int) {
-    Row(Modifier.fillMaxWidth().hairlineTop(Room.Ink).hairlineBottom(Room.Ink)) {
-        listOf(
+private fun LibraryStats(albums: Int, files: Int, folders: Int, unreadable: Int, mp3: Int? = null) {
+    Row(Modifier.fillMaxWidth().hairlineTop(Room.Ink).hairlineBottom(Room.Ink).testTag("library-stats")) {
+        listOfNotNull(
             Triple("$albums", "albums", Room.Ink),
             Triple("$files", "music files", Room.Ink),
+            // With MP3 in your folder on: how many of the music files are MP3.
+            mp3?.let { Triple("$it", "mp3", Room.Ink) },
             Triple("$folders", "folders", Room.Ink),
             Triple("$unreadable", "unreadable", if (unreadable > 0) Room.Danger else Room.Ink),
         ).forEach { (value, label, colour) ->
@@ -404,7 +406,7 @@ private fun RepairLibrary(state: RoomState, actions: RoomActions) {
             if (total > SHOWN_BROKEN) BasicText("and ${total - SHOWN_BROKEN} more", style = Room.LabelQuiet, modifier = Modifier.fillMaxWidth().hairlineTop().padding(12.dp))
         }
         BasicText(
-            "to fix one: re-download or re-rip it as real flac, or check it with flac -t on a computer. then tap repair again.",
+            "to fix one: re-download or re-rip it as real ${if (state.mp3Local) "flac or mp3" else "flac"}, or check it with flac -t on a computer. then tap repair again.",
             style = Room.LabelQuiet.copy(lineHeight = 15.sp),
         )
     }
@@ -423,7 +425,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AboutPage(state: Room
         "inter and silkscreen: sil open font license."
     Column(Modifier.fillMaxWidth()) {
         listOf(
-            "records" to "your flac records play offline, with no account",
+            "records" to "your ${if (state.mp3Local) "flac and mp3" else "flac"} records play offline, with no account",
             "soulseek" to "optional. finds and downloads flac and carries private messages. its protocol does not encrypt sign-in or messages.",
             "drops" to "friday drops come from the internet archive under their own licences.",
             "fonts" to fonts,

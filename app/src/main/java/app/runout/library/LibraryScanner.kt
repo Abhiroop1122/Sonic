@@ -21,7 +21,7 @@ class ScannedAlbum(
 
 data class ScanProgress(val folders: Int, val albums: Int, val audioFiles: Int = 0)
 
-/** A .flac file the scan couldn't use, with a plain reason. */
+/** A music file the scan couldn't use, with a plain reason. */
 data class UnreadableFile(val path: String, val reason: String)
 
 /** What a scan found, shown when a folder turns up no albums so the user can see why. */
@@ -34,6 +34,8 @@ data class ScanReport(
     val error: String? = null,
     /** The files behind [unreadable], up to [MAX_LISTED]. */
     val unreadableFiles: List<UnreadableFile> = emptyList(),
+    /** Of [audioFiles], the MP3s (only counted with Settings › Flags › MP3 in your folder on). */
+    val mp3Files: Int = 0,
 ) {
     val summary: String
         get() = when {
@@ -56,7 +58,11 @@ data class ScanReport(
  * permission is needed) and turns every folder of audio files into one or more albums. Albums are
  * handed back one at a time as they're found, so the shelf fills while the scan runs.
  */
-class LibraryScanner(private val context: Context) {
+class LibraryScanner(
+    private val context: Context,
+    /** Settings › Flags › MP3 in your folder, read when a scan starts. */
+    private val allowMp3: () -> Boolean = { false },
+) {
 
     private data class Entry(val docId: String, val name: String, val mime: String, val size: Long) {
         val isDir: Boolean get() = mime == DocumentsContract.Document.MIME_TYPE_DIR
@@ -67,9 +73,14 @@ class LibraryScanner(private val context: Context) {
         treeUri: Uri,
         onProgress: (ScanProgress) -> Unit = {},
         onAlbum: suspend (ScannedAlbum) -> Unit = {},
+        mp3: Boolean = allowMp3(),
     ): ScanReport = withContext(Dispatchers.IO) {
+        // One rule for the whole scan, even if the flag changes while it runs.
+        val policy = LocalAudioPolicy.of(mp3)
+        val audioExtensions = policy.extensions
         var folders = 0
         var audioFiles = 0
+        var mp3Files = 0
         var unreadable = 0
         var albums = 0
         val other = mutableMapOf<String, Int>()
@@ -85,6 +96,7 @@ class LibraryScanner(private val context: Context) {
             val children = list(treeUri, docId) ?: return@withContext ScanReport(
                 folders, audioFiles, unreadable, albums, other,
                 error = "Android didn't let the app list this folder. Try choosing it again.",
+                mp3Files = mp3Files,
             )
             listedAnything = true
             folders++
@@ -92,16 +104,17 @@ class LibraryScanner(private val context: Context) {
                 .sortedBy { it.name.lowercase() }
                 .forEach { queue.add(it.docId to depth + 1) }
             val files = children.filter { !it.isDir }
-            val audio = files.filter { it.ext in AUDIO_EXTENSIONS }
-            files.filter { it.ext !in AUDIO_EXTENSIONS && it.ext !in IMAGE_EXTENSIONS && it.ext.isNotEmpty() }
+            val audio = files.filter { it.ext in audioExtensions }
+            files.filter { it.ext !in audioExtensions && it.ext !in IMAGE_EXTENSIONS && it.ext.isNotEmpty() }
                 .forEach { other[it.ext] = (other[it.ext] ?: 0) + 1 }
             audioFiles += audio.size
+            mp3Files += audio.count { it.ext == "mp3" }
             if (audio.isNotEmpty()) {
                 val image = pickFolderImage(files)?.let { DocumentsContract.buildDocumentUriUsingTree(treeUri, it.docId) }
                 // No picture in the folder: a Sonic download keeps its sleeve inside record.vinyl.
                 val packaged = if (image != null) null else files.firstOrNull { it.name == VINYL_RECORD || it.name == "$VINYL_RECORD.zip" }
                     ?.let { packagedSleeve(DocumentsContract.buildDocumentUriUsingTree(treeUri, it.docId)) }
-                val (found, failed) = readFolder(treeUri, docId, nameOf(children, docId), audio, image, packaged)
+                val (found, failed) = readFolder(policy, treeUri, docId, nameOf(children, docId), audio, image, packaged)
                 unreadable += failed.size
                 if (failedFiles.size < ScanReport.MAX_LISTED) failedFiles += failed.take(ScanReport.MAX_LISTED - failedFiles.size)
                 found.forEach {
@@ -119,6 +132,7 @@ class LibraryScanner(private val context: Context) {
             otherFiles = other,
             error = if (!listedAnything) "Android didn't let the app list this folder. Try choosing it again." else null,
             unreadableFiles = failedFiles,
+            mp3Files = mp3Files,
         )
     }
 
@@ -175,10 +189,11 @@ class LibraryScanner(private val context: Context) {
     }.getOrNull()
 
     /** A provider MIME type or Android decoder fallback cannot bypass the music policy. */
-    private fun readFile(uri: Uri, entry: Entry, wantPicture: Boolean): AudioInfo? =
-        FlacPolicy.read(context, uri, entry.name, wantPicture)
+    private fun readFile(policy: LocalAudioPolicy, uri: Uri, entry: Entry, wantPicture: Boolean): AudioInfo? =
+        policy.read(context, uri, entry.name, wantPicture)
 
     private suspend fun readFolder(
+        policy: LocalAudioPolicy,
         treeUri: Uri,
         folderId: String,
         folderName: String,
@@ -193,15 +208,15 @@ class LibraryScanner(private val context: Context) {
         val reads = audio.sortedBy { it.name.lowercase() }.mapNotNull { entry ->
             coroutineContext.ensureActive()
             val uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, entry.docId)
-            val info = readFile(uri, entry, wantPicture = !pictureFound)
+            val info = readFile(policy, uri, entry, wantPicture = !pictureFound)
             if (info?.picture != null) pictureFound = true
             if (info == null) {
-                failed += UnreadableFile("${docPath(folderId)}/${entry.name}", FlacPolicy.diagnose(context, uri))
+                failed += UnreadableFile("${docPath(folderId)}/${entry.name}", policy.diagnose(context, uri, entry.name))
                 return@mapNotNull null
             }
             // Real FLAC this phone can't decode stays off the shelf, with the reason in the report,
             // rather than failing when the needle drops.
-            FlacPolicy.unplayableReason(info)?.let { reason ->
+            policy.unplayableReason(info)?.let { reason ->
                 failed += UnreadableFile("${docPath(folderId)}/${entry.name}", reason)
                 return@mapNotNull null
             }
@@ -213,7 +228,9 @@ class LibraryScanner(private val context: Context) {
         }
 
         val groups = reads.groupBy { it.info.album?.takeIf { a -> a.isNotBlank() } ?: folderName }
-        val albums = groups.map { (albumTitle, items) ->
+        val albums = groups.map { (albumTitle, all) ->
+            // The same album in FLAC and MP3 side by side: the FLAC tracks stay, their MP3 copies don't.
+            val items = preferFlac(all, { it.info }, { it.entry.name })
             val artist = items.firstNotNullOfOrNull { it.info.albumArtist?.takeIf { a -> a.isNotBlank() } }
                 ?: items.groupingBy { it.info.artist ?: "" }.eachCount().maxByOrNull { it.value }?.key?.takeIf { it.isNotEmpty() }
                 ?: "Unknown artist"
@@ -231,7 +248,6 @@ class LibraryScanner(private val context: Context) {
                     durationKnown = !r.estimated,
                 )
             }
-            val first = sorted.first().info
             val licences = sorted.mapNotNull { it.info.license }.distinct()
             ScannedAlbum(
                 album = Album(
@@ -242,7 +258,8 @@ class LibraryScanner(private val context: Context) {
                     folderUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderId).toString(),
                     tracks = tracks,
                     // The lowest depth and rate on the record, as the deck shows it.
-                    quality = FlacPolicy.quality(sorted.map { it.info }).copy(codec = first.codec),
+                    // One MP3 track makes the record MP3: lossy, pressed black, never hi-res.
+                    quality = policy.quality(sorted.map { it.info }),
                     license = licences.singleOrNull()?.takeIf { licences.size == 1 && sorted.all { it.info.license != null } },
                     albumGainDb = sorted.firstNotNullOfOrNull { it.info.albumGainDb },
                 ),
@@ -258,9 +275,25 @@ class LibraryScanner(private val context: Context) {
         /** Written by Sonic beside each download: the record's card, with its sleeve inside. */
         const val VINYL_RECORD = "record.vinyl"
         private const val MAX_SLEEVE_BYTES = 8 * 1024 * 1024
+        /** The music the scan reads with Settings › Flags › MP3 in your folder off; on, [LocalAudioPolicy.extensions]. */
         val AUDIO_EXTENSIONS = setOf("flac")
         val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
         val PREFERRED_IMAGE_NAMES = setOf("cover", "folder", "front", "album", "albumart", "artwork")
+
+        /**
+         * One album's reads with MP3 duplicates of FLAC tracks left out: an MP3 goes when a FLAC on
+         * the same album has its disc and track number (or, untracked, its title).
+         */
+        fun <T> preferFlac(items: List<T>, info: (T) -> AudioInfo, name: (T) -> String): List<T> {
+            val flac = items.filter { info(it).codec == "FLAC" }
+            if (flac.isEmpty() || flac.size == items.size) return items
+            fun key(t: T): String = info(t).let { i ->
+                if (i.track != null) "${i.disc ?: 1}#${i.track}"
+                else "t:" + (i.title?.takeIf { it.isNotBlank() } ?: name(t).substringBeforeLast('.')).trim().lowercase()
+            }
+            val taken = flac.map(::key).toSet()
+            return items.filter { info(it).codec == "FLAC" || key(it) !in taken }
+        }
 
         fun codecFor(ext: String, bitrateKbps: Int?): String = when (ext) {
             "flac" -> "FLAC"

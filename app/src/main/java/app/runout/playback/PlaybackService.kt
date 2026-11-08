@@ -9,7 +9,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import app.runout.RunoutApp
-import app.runout.library.FlacPolicy
+import app.runout.library.LocalAudioPolicy
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import app.runout.sound.PlayerFactory
@@ -69,7 +69,7 @@ class PlaybackService : MediaSessionService() {
                 startPositionMs: Long,
             ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
                 if (isAllowed(mediaItems)) Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs))
-                else Futures.immediateFailedFuture(IllegalArgumentException("Only local verified FLAC music can be played"))
+                else Futures.immediateFailedFuture(IllegalArgumentException("Only local verified music can be played"))
         }).build()
 
         // Switching hi-res output on or off needs a new audio output; carry the record across.
@@ -78,13 +78,16 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    private val policy: LocalAudioPolicy get() = (application as RunoutApp).graph.library.localPolicy
+
     private fun isAllowed(items: List<MediaItem>): Boolean = items.all { item ->
-        item.localConfiguration?.uri?.let { FlacPolicy.read(this, it) != null } == true
+        // MP3 only with Settings › Flags › MP3 in your folder on; Deck sends MP3 for folder records alone.
+        item.localConfiguration?.uri?.let { policy.read(this, it) != null } == true
     }
 
     private fun validatedItems(items: List<MediaItem>): ListenableFuture<List<MediaItem>> =
         if (isAllowed(items)) Futures.immediateFuture(items)
-        else Futures.immediateFailedFuture(IllegalArgumentException("Only local verified FLAC music can be played"))
+        else Futures.immediateFailedFuture(IllegalArgumentException("Only local verified music can be played"))
 
     private fun rebuildPlayer() {
         val old = player

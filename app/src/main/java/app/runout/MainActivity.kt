@@ -160,6 +160,7 @@ class MainActivity : ComponentActivity() {
             val discoveryQuery by graph.discovery.query.collectAsStateWithLifecycle()
             val coverLookupEnabled by graph.library.coverLookupEnabled.collectAsStateWithLifecycle()
             val coverLookupNoticePending by graph.library.coverLookupNoticePending.collectAsStateWithLifecycle()
+            val mp3Local by graph.library.mp3Local.collectAsStateWithLifecycle()
             var pendingDownload by remember { mutableStateOf<SoulseekSearchResult?>(null) }
 
 
@@ -222,6 +223,7 @@ class MainActivity : ComponentActivity() {
                     override fun repairLibrary() { graph.library.repair() }
                     override fun setCoverLookupEnabled(enabled: Boolean) { graph.library.setCoverLookupEnabled(enabled) }
                     override fun dismissCoverLookupNotice() { graph.library.dismissCoverLookupNotice() }
+                    override fun setMp3Local(on: Boolean) { this@MainActivity.setMp3Local(on) }
                     override fun answerShareOffer(share: Boolean) { graph.soulseek.answerShareOffer(share) }
                     override fun load(album: Album) = graph.deck.load(album)
                     override fun discLanded() = graph.deck.discLanded()
@@ -426,6 +428,7 @@ class MainActivity : ComponentActivity() {
                     onboardingStep = onboardingStep,
                     coverLookupEnabled = coverLookupEnabled,
                     coverLookupNoticePending = coverLookupNoticePending,
+                    mp3Local = mp3Local,
                     turtleMode = turtleMode,
                     newDrop = newDrop,
                     deckFlags = deckFlags,
@@ -541,7 +544,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Settings › Flags › MP3 in your folder. Off: an MP3 record on the platter goes back first (it
+     * may no longer play), then its records leave the crate and the folder is read again.
+     */
+    private fun setMp3Local(on: Boolean) {
+        val playing = graph.deck.state.value.album
+        if (!on && playing?.source == Source.FOLDER && playing.tracks.any(app.runout.library.LocalAudioPolicy::isMp3Track)) graph.deck.eject()
+        graph.library.setMp3Local(on)
+    }
+
     private fun shareAlbum(album: Album) {
+        // MP3 plays from your own folder only; sharing stays FLAC (ShareRepository refuses it too).
+        if (album.tracks.any(app.runout.library.LocalAudioPolicy::isMp3Track)) {
+            message.value = "“${album.title}” is MP3, so it can't be shared: sharing is FLAC only."
+            return
+        }
         message.value = "Packing “${album.title}”…"
         graph.scope.launch {
             val file = runCatching { graph.share.exportAlbum(album) }.getOrElse {

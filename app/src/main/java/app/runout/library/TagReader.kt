@@ -259,22 +259,17 @@ object TagReader {
             pending = head
         }
 
-        // Find the first MPEG frame.
+        // Find the first MPEG frame: a plausible Layer III header followed, exactly one frame
+        // later, by another header of the same stream. A lone 0xFFE sync pattern in junk, a
+        // cover or a renamed file is not enough.
         val window = ByteArray(64 * 1024)
         var filled = 0
         pending?.let { it.copyInto(window); filled = it.size }
         filled += s.readUpTo(window, filled, window.size - filled)
         var i = 0
         while (i + 4 <= filled) {
-            val b0 = window[i].toInt() and 0xFF
-            val b1 = window[i + 1].toInt() and 0xFF
-            if (b0 == 0xFF && (b1 and 0xE0) == 0xE0 && ((b1 shr 1) and 0x3) == 1) {
-                val b2 = window[i + 2].toInt() and 0xFF
-                val version = (b1 shr 3) and 0x3 // 3 = MPEG1, 2 = MPEG2, 0 = MPEG2.5
-                val bitrateIdx = b2 shr 4
-                val rateIdx = (b2 shr 2) and 0x3
-                if (version != 1 && bitrateIdx in 1..14 && rateIdx < 3) break
-            }
+            val length = mp3FrameLength(window, i, filled)
+            if (length != null && sameMp3Stream(window, i, i + length, filled)) break
             i++
         }
         if (i + 4 > filled) return null
@@ -284,12 +279,7 @@ object TagReader {
         val mpeg1 = ((b1 shr 3) and 0x3) == 3
         val version = (b1 shr 3) and 0x3
         val bitrate = (if (mpeg1) MPEG1_L3 else MPEG2_L3)[b2 shr 4]
-        val rates = when (version) {
-            3 -> intArrayOf(44_100, 48_000, 32_000)
-            2 -> intArrayOf(22_050, 24_000, 16_000)
-            else -> intArrayOf(11_025, 12_000, 8_000)
-        }
-        val rate = rates[(b2 shr 2) and 0x3]
+        val rate = mp3Rates(version)[(b2 shr 2) and 0x3]
         val mono = (b3 shr 6) == 3
         val spf = if (mpeg1) 1152 else 576
         val frameStart = audioStart + i
@@ -338,6 +328,35 @@ object TagReader {
             trackGainDb = gain(tags["TXXX:REPLAYGAIN_TRACK_GAIN"]),
             picture = picture,
         )
+    }
+
+    private fun mp3Rates(version: Int): IntArray = when (version) {
+        3 -> intArrayOf(44_100, 48_000, 32_000)
+        2 -> intArrayOf(22_050, 24_000, 16_000)
+        else -> intArrayOf(11_025, 12_000, 8_000)
+    }
+
+    /** The length in bytes of the MPEG Layer III frame whose header starts at [p], or null when there isn't one. */
+    internal fun mp3FrameLength(b: ByteArray, p: Int, end: Int = b.size): Int? {
+        if (p < 0 || p + 4 > end) return null
+        val b0 = b[p].toInt() and 0xFF
+        val b1 = b[p + 1].toInt() and 0xFF
+        val b2 = b[p + 2].toInt() and 0xFF
+        if (b0 != 0xFF || (b1 and 0xE0) != 0xE0 || ((b1 shr 1) and 0x3) != 1) return null
+        val version = (b1 shr 3) and 0x3 // 3 = MPEG1, 2 = MPEG2, 0 = MPEG2.5
+        val bitrateIdx = b2 shr 4
+        val rateIdx = (b2 shr 2) and 0x3
+        if (version == 1 || bitrateIdx !in 1..14 || rateIdx >= 3) return null
+        val kbps = (if (version == 3) MPEG1_L3 else MPEG2_L3)[bitrateIdx]
+        val padding = (b2 shr 1) and 0x1
+        return (if (version == 3) 144 else 72) * kbps * 1000 / mp3Rates(version)[rateIdx] + padding
+    }
+
+    /** Whether a valid frame header at [next] belongs to the same stream (version, rate) as the one at [first]. */
+    private fun sameMp3Stream(b: ByteArray, first: Int, next: Int, end: Int): Boolean {
+        if (mp3FrameLength(b, next, end) == null) return false
+        return (b[first + 1].toInt() and 0x18) == (b[next + 1].toInt() and 0x18) &&
+            ((b[first + 2].toInt() shr 2) and 0x3) == ((b[next + 2].toInt() shr 2) and 0x3)
     }
 
     private fun parseId3(body: ByteArray, major: Int, flags: Int, out: MutableMap<String, String>, wantPicture: Boolean): ByteArray? {

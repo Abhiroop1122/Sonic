@@ -234,7 +234,7 @@ fun DropsPanel(
         if (!signedIn) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicText(
-                    "sign in with soulseek to download from the internet archive. local flac playback is always available without an account.",
+                    "sign in with soulseek to download from the internet archive. your own music folder always plays without an account.",
                     style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
                 )
                 TeButton("sign in with soulseek", onAccount, Modifier.testTag("drops-sign-in"))
