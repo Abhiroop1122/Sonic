@@ -237,6 +237,23 @@ class FridayDropsTest {
     }
 
     @Test
+    fun `MP3 in your folder doesn't open Friday Drops to MP3`() = runBlocking {
+        context.getSharedPreferences(app.runout.library.LibraryRepository.MP3_PREFS, 0).edit()
+            .putBoolean(app.runout.library.LibraryRepository.KEY_MP3, true).commit()
+        val h = FakeHttp(mapOf(
+            "advancedsearch.php" to { Fixtures.bytes("ia/search_page1.json") },
+            "/metadata/" to { metadataFor("x") },
+            ".flac" to { Fixtures.bytes("Music/Ines Varga/Paper Moons/01 Paper Moons.mp3") },
+            ".mp3" to { Fixtures.bytes("Music/Ines Varga/Paper Moons/01 Paper Moons.mp3") },
+        ))
+        val r = repo(h)
+        val item = (r.refresh() as DropState.Ready).week.items.first()
+        assertTrue(r.claim(item).isFailure)
+        assertTrue("no MP3 is ever fetched for a claim", h.calls.none { it.endsWith(".mp3") })
+        assertTrue(r.albums.value.isEmpty())
+    }
+
+    @Test
     fun `the week's drop loads once and is cached`() = runBlocking {
         val h = http()
         val r = repo(h)
