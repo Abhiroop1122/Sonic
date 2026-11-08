@@ -56,7 +56,7 @@ data class SignalPath(
     val note: String?,
     /** The file's own samples reach the DAC: the verdict's lamp is green. */
     val bitPerfect: Boolean = false,
-    /** Lossy on the way out (Bluetooth): the lamp is red. */
+    /** Lossy on the way out (Bluetooth), or a lossy file (MP3): the lamp is red. */
     val lossy: Boolean = false,
 ) {
     data class Step(val title: String, val spec: String, val detail: String, val ok: Boolean = true)
@@ -67,15 +67,22 @@ private fun rate(hz: Int) = AudioQuality.formatRate(hz)
 /**
  * The chain for what's playing, or null when nothing is. Honest by rule: "bit-perfect" only when
  * a USB DAC media is routed to takes the file's own samples in an exactly matching mode; the bit
- * depth is the file's, not the decoder's; Bluetooth is lossy, whatever else is on.
+ * depth is the file's, not the decoder's; Bluetooth is lossy, whatever else is on; and a lossy file
+ * (MP3) is never lossless or bit-perfect, however clean the way out.
  */
 fun signalPath(o: OutputStatus, s: SoundSettings, codec: app.runout.sound.BluetoothCodec? = null): SignalPath? {
     if (o.sampleRate == 0) return null
-    val fileBits = o.sourceBits
-    val bits = if (fileBits > 0) "$fileBits-bit" else "PCM"
+    val lossyCodec = o.lossyCodec
+    val lossySource = lossyCodec != null
+    val fileBits = if (lossySource) 0 else o.sourceBits
+    val bits = lossyCodec ?: if (fileBits > 0) "$fileBits-bit" else "PCM"
     val source = "$bits · ${rate(o.sampleRate)}"
-    val hiResFile = fileBits > 16 || o.sampleRate > 48_000
-    val track = SignalPath.Step(
+    val hiResFile = !lossySource && (fileBits > 16 || o.sampleRate > 48_000)
+    val track = if (lossyCodec != null) SignalPath.Step(
+        lossyCodec, source,
+        "Lossy: $lossyCodec left part of the music out when it was made. Nothing after this brings it back.",
+        ok = false,
+    ) else SignalPath.Step(
         "FLAC", source,
         when {
             hiResFile -> "Hi-res lossless"
@@ -127,7 +134,9 @@ fun signalPath(o: OutputStatus, s: SoundSettings, codec: app.runout.sound.Blueto
     val resampled = mixer > 0 && mixer != o.sampleRate
     // A USB DAC lists the rates it takes: a file at any other rate is resampled before it gets there.
     val dacResamples = d.kind == OutputKind.USB && d.rates.isNotEmpty() && o.sampleRate !in d.rates
-    val bitPerfect = o.bitPerfect == BitPerfect.ON && d.kind == OutputKind.USB && s.pure && !folded
+    val bitPerfect = o.bitPerfect == BitPerfect.ON && d.kind == OutputKind.USB && s.pure && !folded && !lossySource
+    // A lossy file is never reported bit-perfect, whatever mode the DAC is in.
+    val bitPerfectState = if (lossySource && (o.bitPerfect == BitPerfect.ON || o.bitPerfect == BitPerfect.NOT_EXACT)) BitPerfect.LOSSY_SOURCE else o.bitPerfect
     val routed = when {
         // Bluetooth first: nothing that goes over it is bit-perfect or lossless.
         // With the codec readout on, what Android's Bluetooth stack says it is; lossy either way.
@@ -145,7 +154,11 @@ fun signalPath(o: OutputStatus, s: SoundSettings, codec: app.runout.sound.Blueto
             buildString {
                 if (dacResamples) append("This DAC takes ${d.rates.joinToString(" or ") { rate(it) }}, so ${rate(o.sampleRate)} is resampled on the way. ")
                 else if (resampled) append("Android mixes this output at ${rate(mixer)}, so ${rate(o.sampleRate)} is resampled on the way. ")
-                append(if (s.pure) o.bitPerfect.label + "." else "Through Android's mixer. Turn on Pure for bit-perfect (Android 14 and later).")
+                append(
+                    if (s.pure) bitPerfectState.label + "."
+                    else if (lossySource) "Through Android's mixer."
+                    else "Through Android's mixer. Turn on Pure for bit-perfect (Android 14 and later).",
+                )
             },
             ok = !resampled && !dacResamples,
         )
@@ -164,19 +177,21 @@ fun signalPath(o: OutputStatus, s: SoundSettings, codec: app.runout.sound.Blueto
 
     val output = if (spatial && !bluetooth) routed.copy(detail = routed.detail + spatialNote, ok = false) else routed
 
-    val lossless = if (processed) "Lossless source, processed" else "Lossless"
+    // A lossy file is named as such in every verdict: never "lossless", never "bit-perfect".
+    val kind = if (lossyCodec != null) "Lossy $lossyCodec" else "Lossless"
+    val lossless = if (processed) "$kind source, processed" else if (lossySource) "$kind source" else kind
     val verdict = when {
         bluetooth -> if (spatial) "Lossy over Bluetooth, spatialized by Android" else "Lossy over Bluetooth"
         bitPerfect -> "Bit-perfect"
-        spatial -> "Lossless source, spatialized by Android"
+        spatial -> "$kind source, spatialized by Android"
         folded -> "Cut to 16-bit"
-        d.kind == OutputKind.OTHER -> "Through Android's mixer"
+        d.kind == OutputKind.OTHER -> if (lossySource) "$kind source, through Android's mixer" else "Through Android's mixer"
         resampled -> "$lossless, resampled to ${rate(mixer)}"
-        dacResamples -> "${if (processed) "Lossless source, processed" else "Lossless source"}, resampled for the DAC"
+        dacResamples -> "${if (processed) "$kind source, processed" else "$kind source"}, resampled for the DAC"
         d.kind == OutputKind.USB -> "$lossless, through Android's mixer"
         else -> lossless
     }
-    val short = "${fileBits.takeIf { it > 0 }?.let { "$it/" } ?: ""}${rate(o.sampleRate, withUnit = false)} → ${d.kind.label}"
+    val short = "${lossyCodec?.let { "$it " } ?: fileBits.takeIf { it > 0 }?.let { "$it/" } ?: ""}${rate(o.sampleRate, withUnit = false)} → ${d.kind.label}"
     val note = when {
         bitPerfect -> null
         hiResFile && d.kind != OutputKind.USB -> {
@@ -186,7 +201,7 @@ fun signalPath(o: OutputStatus, s: SoundSettings, codec: app.runout.sound.Blueto
         }
         else -> null
     }
-    return SignalPath(track, runout, output, verdict, short, note, bitPerfect = bitPerfect, lossy = bluetooth)
+    return SignalPath(track, runout, output, verdict, short, note, bitPerfect = bitPerfect, lossy = bluetooth || lossySource)
 }
 
 /** What each kind of Bluetooth link does to the music. Android doesn't tell apps the codec in use. */

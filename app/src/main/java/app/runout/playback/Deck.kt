@@ -12,7 +12,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import app.runout.model.Album
-import app.runout.library.FlacPolicy
+import app.runout.library.LocalAudioPolicy
 import app.runout.model.Side
 import app.runout.model.SideSplitter
 import kotlinx.coroutines.CoroutineScope
@@ -85,6 +85,8 @@ class Deck(
     private val sfx: VinylSfx,
     private val scope: CoroutineScope,
     private val sound: app.runout.sound.SoundEngine? = null,
+    /** Settings › Flags › MP3 in your folder: MP3 records from the music folder play too. */
+    private val allowMp3: () -> Boolean = { false },
     private val clock: () -> Long = System::currentTimeMillis,
     /** How the deck reaches a player: the playback service by default; tests hand it one directly. */
     private val connectPlayer: (onReady: (Player?) -> Unit) -> Unit = { ready -> connectToService(context, ready) },
@@ -263,6 +265,10 @@ class Deck(
         if (!pure) sfx.platterDrop()
     }
 
+    /** MP3 only ever plays from the listener's own folder, and only with the flag on; every other record is FLAC. */
+    private fun policyFor(album: Album): LocalAudioPolicy =
+        if (album.source == app.runout.model.Source.FOLDER) LocalAudioPolicy.of(allowMp3()) else LocalAudioPolicy.FLAC_ONLY
+
     /** A record has been dropped on the platter. It plays at once with auto-play on; else it waits for the needle. */
     fun load(album: Album) {
         put(album)
@@ -270,7 +276,7 @@ class Deck(
     }
 
     private fun put(album: Album) {
-        val verified = FlacPolicy.filterAlbum(context, album, refreshMetadata = false) ?: return
+        val verified = policyFor(album).filterAlbum(context, album, refreshMetadata = false) ?: return
         val sides = SideSplitter.split(verified.tracks)
         rampJob?.cancel()
         sfx.stopCrackle()
@@ -326,7 +332,7 @@ class Deck(
                 c.clearMediaItems()
                 return@withController
             }
-            c.setMediaItems(mediaItemsFor(album, side))
+            c.setMediaItems(mediaItemsFor(album, side, policyFor(album)))
             c.playbackParameters = PlaybackParameters(RECORDED_SPEED, RECORDED_SPEED)
             c.prepare()
         }
@@ -554,8 +560,9 @@ class Deck(
         /** Pressing "previous" this far into a track restarts it instead. */
         const val RESTART_WINDOW_MS = 3_000L
 
-        fun mediaItemsFor(album: Album, side: Side): List<MediaItem> = side.tracks.map { t ->
-            require(FlacPolicy.isFlacName(t.fileName.ifBlank { Uri.parse(t.uri).lastPathSegment.orEmpty() })) { "Only FLAC tracks can be played" }
+        fun mediaItemsFor(album: Album, side: Side, policy: LocalAudioPolicy = LocalAudioPolicy.FLAC_ONLY): List<MediaItem> = side.tracks.map { t ->
+            val name = LocalAudioPolicy.nameOf(t)
+            require(policy.accepts(name)) { if (policy.mp3) "Only FLAC and MP3 tracks can be played" else "Only FLAC tracks can be played" }
             val extras = android.os.Bundle().apply {
                 album.albumGainDb?.let { putFloat(PlaybackService.EXTRA_ALBUM_GAIN, it) }
                 t.trackGainDb?.let { putFloat(PlaybackService.EXTRA_TRACK_GAIN, it) }
@@ -563,7 +570,8 @@ class Deck(
             MediaItem.Builder()
                 .setMediaId(t.id)
                 .setUri(Uri.parse(t.uri))
-                .setMimeType("audio/flac")
+                // The player is told what the file is: MP3 as MP3, never passed off as FLAC.
+                .setMimeType(LocalAudioPolicy.mimeTypeFor(name))
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(t.title)

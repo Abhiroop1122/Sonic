@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -143,7 +145,7 @@ private val NAV = listOf(Panel.DIG, Panel.DROPS, Panel.FRIENDS, Panel.SETTINGS)
  * 8 dp apart. The open place is a black cell with white ink. An orange square marks news.
  */
 @Composable
-fun TeNavBar(active: Panel?, badges: Set<Panel>, onOpen: (Panel) -> Unit, modifier: Modifier = Modifier, onHome: (() -> Unit)? = null, upright: Boolean = true) {
+fun TeNavBar(active: Panel?, badges: Set<Panel>, onOpen: (Panel) -> Unit, modifier: Modifier = Modifier, onHome: (() -> Unit)? = null, upright: Boolean = true, onCellPlaced: ((Panel, androidx.compose.ui.geometry.Rect) -> Unit)? = null) {
     val tick = rememberTick()
     Row(modifier.fillMaxWidth().background(Room.Background)) {
         // On a page, an orange "room" cell slides in from the left: home is under the thumb, not in the top corner.
@@ -181,6 +183,7 @@ fun TeNavBar(active: Panel?, badges: Set<Panel>, onOpen: (Panel) -> Unit, modifi
             Column(
                 Modifier
                     .weight(1f)
+                    .then(if (onCellPlaced != null) Modifier.onGloballyPositioned { onCellPlaced(p, it.boundsInRoot()) } else Modifier)
                     .background(if (on) Room.Ink else Room.Background)
                     .testTag("nav:${p.name}")
                     .semantics(mergeDescendants = true) { contentDescription = p.nav + if (p in badges) ", new" else "" }

@@ -1,5 +1,6 @@
 package app.runout
 
+import app.runout.ui.TourPreferences
 import app.runout.update.WhatsNew
 import app.runout.ui.LookPreferences
 import android.app.Application
@@ -87,8 +88,9 @@ class AppGraph(app: Application) {
     val library = LibraryRepository(app, LibraryScanner(app), artwork, scope)
     val sound = SoundEngine(app)
     val sfx = VinylSfx(scope)
-    val deck = Deck(app, sfx, scope, sound)
+    val deck = Deck(app, sfx, scope, sound, allowMp3 = { library.mp3Local.value })
     val look = LookPreferences(app)
+    val tour = TourPreferences(app)
     val storage = StorageAnalyzer(app)
     val updates = Updates(app, http, BuildConfig.VERSION_NAME)
     val whatsNew = WhatsNew(app, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toLong())

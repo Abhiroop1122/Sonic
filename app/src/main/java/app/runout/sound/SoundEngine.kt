@@ -30,6 +30,7 @@ enum class BitPerfect(val label: String) {
     UNSUPPORTED("This phone or DAC doesn't offer bit-perfect"),
     NO_MATCH("The DAC has no bit-perfect mode for this exact format"),
     NOT_EXACT("Not bit-perfect: the samples are changed before the DAC"),
+    LOSSY_SOURCE("Not bit-perfect: a lossy file (MP3) doesn't hold the original samples"),
     ON("Bit-perfect to USB DAC"),
 }
 
@@ -81,14 +82,19 @@ data class OutputStatus(
     val limiting: Boolean = false,
     /** Crackle is on and mixed in alongside the music. */
     val crackle: Boolean = false,
+    /** The file's lossy codec ("MP3"), or null for a lossless (FLAC) file. Lossy is never exact or bit-perfect. */
+    val lossyCodec: String? = null,
 ) {
+    val lossySource: Boolean get() = lossyCodec != null
+
     val label: String
         get() = if (sampleRate == 0) "Nothing playing" else buildString {
-            append(if (sourceBits > 0) "$sourceBits-bit" else "PCM")
+            append(lossyCodec ?: if (sourceBits > 0) "$sourceBits-bit" else "PCM")
             append(" · ")
             append(app.runout.model.AudioQuality.formatRate(sampleRate))
             append(if (floatPath) " → 32-bit float" else if (dithered) " → 16-bit, dithered" else " → 16-bit")
-            if (!processing && !dithered) append(" · untouched")
+            if (lossyCodec != null) append(" · lossy source")
+            else if (!processing && !dithered) append(" · untouched")
         }
 }
 
@@ -104,6 +110,8 @@ data class StreamFormat(
     val channels: Int,
     val trackEncoding: Int,
     val deep: Boolean,
+    /** The file's lossy codec ("MP3"), or null for lossless. */
+    val lossyCodec: String? = null,
 )
 
 /**
@@ -246,7 +254,7 @@ class SoundEngine(private val context: Context?) {
         _status.update {
             it.copy(
                 sourceBits = format.fileBits, sampleRate = format.sampleRate, decodedBits = format.decodedBits,
-                floatPath = format.trackEncoding == C.ENCODING_PCM_FLOAT,
+                floatPath = format.trackEncoding == C.ENCODING_PCM_FLOAT, lossyCodec = format.lossyCodec,
             )
         }
         refreshProcessing()
@@ -317,7 +325,8 @@ class SoundEngine(private val context: Context?) {
             if (key != pureKey) {
                 val choice = runCatching { PureOutput.apply(ctx, pure, device, st.sampleRate, st.channels, st.trackEncoding, exact) }
                     .getOrDefault(PureOutput.Choice(BitPerfect.UNSUPPORTED))
-                pureResult = choice.state
+                // The DAC can't be told the samples are the original's when the file is lossy.
+                pureResult = if (choice.state == BitPerfect.NOT_EXACT && st.lossyCodec != null) BitPerfect.LOSSY_SOURCE else choice.state
                 integerOutput = choice.integerOutput?.let { IntegerOutput(st.sampleRate, PureOutput.channelMask(st.channels), it) }
                 pureKey = key
             }
@@ -346,9 +355,10 @@ class SoundEngine(private val context: Context?) {
 
         /**
          * Whether the samples handed to Android are the file's own: 16-bit files as 16-bit, or
-         * files up to 24-bit as float, which holds them exactly; never after the decoder cut them.
+         * files up to 24-bit as float, which holds them exactly; never after the decoder cut them,
+         * and never for a lossy file, whose samples were never the original's.
          */
-        fun samplesExact(st: StreamFormat): Boolean = when (st.trackEncoding) {
+        fun samplesExact(st: StreamFormat): Boolean = if (st.lossyCodec != null) false else when (st.trackEncoding) {
             C.ENCODING_PCM_16BIT -> st.fileBits == 16 && st.decodedBits >= 16
             C.ENCODING_PCM_FLOAT -> st.fileBits in 1..24 && st.decodedBits >= st.fileBits
             else -> false

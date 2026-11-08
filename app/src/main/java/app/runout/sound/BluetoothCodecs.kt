@@ -45,7 +45,10 @@ data class BluetoothCodec(val name: String, val sampleRate: Int, val bits: Int, 
  * Opt-in (Settings › Sound and the Audio quality panel): nothing here runs, and no permission is
  * asked for, until the listener turns it on. Whatever goes wrong is said in [problem], once.
  */
-@android.annotation.SuppressLint("MissingPermission") // checked in needsPermission() before any call
+// MissingPermission: checked in needsPermission() before any call. NewApi: the codec classes are public from
+// Android 13 and hidden before it; every use of them below runs inside runCatching, so an older Android that
+// refuses them reads as "unavailable" instead of failing.
+@android.annotation.SuppressLint("MissingPermission", "NewApi")
 class BluetoothCodecs(context: Context) {
     private val context = context.applicationContext
     private val prefs = this.context.getSharedPreferences("bluetooth-codec", Context.MODE_PRIVATE)
@@ -119,7 +122,7 @@ class BluetoothCodecs(context: Context) {
         val status = runCatching {
             BluetoothA2dp::class.java.getMethod("getCodecStatus", BluetoothDevice::class.java).invoke(proxy, device) as? BluetoothCodecStatus
         }.getOrNull()
-        val codec = status?.codecConfig?.let(::describe)
+        val codec = runCatching { status?.codecConfig?.let(::describe) }.getOrNull()
         _codec.value = codec
         _problem.value = if (codec == null) UNAVAILABLE else null
     }
@@ -141,8 +144,10 @@ class BluetoothCodecs(context: Context) {
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                ACTION_CODEC_CONFIG_CHANGED -> IntentCompat.getParcelableExtra(intent, BluetoothCodecStatus.EXTRA_CODEC_STATUS, BluetoothCodecStatus::class.java)
-                    ?.codecConfig?.let(::describe)?.let { _codec.value = it; _problem.value = null }
+                ACTION_CODEC_CONFIG_CHANGED -> runCatching {
+                    IntentCompat.getParcelableExtra(intent, BluetoothCodecStatus.EXTRA_CODEC_STATUS, BluetoothCodecStatus::class.java)
+                        ?.codecConfig?.let(::describe)
+                }.getOrNull()?.let { _codec.value = it; _problem.value = null }
                 ACTION_ACTIVE_DEVICE_CHANGED -> withA2dp { proxy ->
                     val device = runCatching { proxy.connectedDevices.firstOrNull() }.getOrNull()
                     if (device == null) _codec.value = null else if (!needsLink(device)) read(proxy, device)
@@ -176,7 +181,7 @@ class BluetoothCodecs(context: Context) {
 
         /** What a codec config says, in words: its name, rate and depth, and LDAC's bitrate mode when chosen. */
         fun describe(c: BluetoothCodecConfig): BluetoothCodec {
-            val name = (if (Build.VERSION.SDK_INT >= 34) runCatching { c.extendedCodecType?.codecName }.getOrNull() else null)
+            val name = (if (Build.VERSION.SDK_INT >= 35) runCatching { c.extendedCodecType?.codecName }.getOrNull() else null)
                 ?.takeIf { it.isNotBlank() } ?: codecName(c.codecType)
             val quality = if (c.codecType == BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC) ldacQuality(c.codecSpecific1) else null
             return BluetoothCodec(name, sampleRateOf(c.sampleRate), bitsOf(c.bitsPerSample), quality)

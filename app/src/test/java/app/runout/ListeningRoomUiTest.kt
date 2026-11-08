@@ -5,8 +5,10 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import app.runout.ui.DeckSkin
 import app.runout.ui.Look
+import app.runout.ui.LookPreferences
 import app.runout.ui.Room
 import app.runout.ui.ThemeMode
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
@@ -54,6 +56,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -85,6 +88,7 @@ import app.runout.sharing.VinylPackage
 import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -391,6 +395,30 @@ class ListeningRoomUiTest {
     }
 
     @Test
+    fun `the flags page switches MP3 in your folder, off by default`() {
+        portrait()
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() {
+            override fun setMp3Local(on: Boolean) { calls += "mp3:$on" }
+        }
+        var s by mutableStateOf(state())
+        compose.setContent { RoomScreen(s, actions, initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.FLAGS) }
+        // The toggle sits low on the page; a semantics click, since a touch that far down lands off
+        // target under Robolectric here (see the two soulseek settings tests).
+        val toggle = compose.onNodeWithTag("toggle:MP3 in your folder").performScrollTo()
+        toggle.assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "Off"))
+        toggle.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        assertEquals(listOf("mp3:true"), calls)
+        s = s.copy(mp3Local = true)
+        compose.waitForIdle()
+        compose.onNodeWithTag("toggle:MP3 in your folder").performScrollTo()
+            .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "On"))
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        assertEquals(listOf("mp3:true", "mp3:false"), calls)
+        compose.onNodeWithTag("toggle:MP3 in your folder").assertTextContains("mp3 in your folder", substring = true)
+    }
+
+    @Test
     fun `sleep mode puts a moon in the top bar that sets the sleep timer`() {
         portrait()
         val set = mutableListOf<Int?>()
@@ -459,8 +487,9 @@ class ListeningRoomUiTest {
         }
         val s = state().copy(soulseekSession = SoulseekSession(SoulseekConnection.CONNECTED, "abhi", authenticated = true), soulseekShareConsent = true, soulseekWaitingForWifi = true)
         compose.setContent { RoomScreen(s, actions, initialPanel = Panel.SETTINGS, initialSettings = SettingsSection.ACCOUNT) }
-        compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().performClick()
-        compose.onNodeWithTag("upload-slots:3").performScrollTo().performClick()
+        // Semantics clicks: this far down the page a touch lands off target under Robolectric.
+        compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.onNodeWithTag("upload-slots:3").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         assertEquals(listOf("wifi:false", "slots:3"), calls)
         compose.onNodeWithTag("sharing-waiting-wifi").performScrollTo().assertIsDisplayed()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/soulseek_upload_settings.png")
@@ -572,6 +601,84 @@ class ListeningRoomUiTest {
         // No setup steps after it: straight to the room.
         compose.onNodeWithTag("screen:setup").assertDoesNotExist()
         compose.onNodeWithTag("turntable").assertExists()
+    }
+
+    @Test
+    fun `an update brings the tour once, upright only, and About plays it again`() {
+        portrait()
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() {
+            override fun finishTour() { calls += "tour-done" }
+            override fun replayTour() { calls += "tour-again" }
+        }
+        var s by mutableStateOf(state().copy(tourPending = true))
+        compose.setContent { RoomScreen(s, actions) }
+        compose.onNodeWithTag("tour").assertExists()
+        compose.onNodeWithTag("tour-step").assertTextEquals("1 / 9")
+        // Walked to the end: the last stop lights the settings key and says done.
+        repeat(8) { compose.onNodeWithTag("tour-next").performClick() }
+        compose.onNodeWithTag("tour-title").assertTextEquals("flags")
+        compose.onNodeWithTag("tour-next").assertTextEquals("done").performClick()
+        assertEquals(listOf("tour-done"), calls)
+        // Done, it's gone; About's "how to play the deck" asks for it again.
+        s = s.copy(tourPending = false)
+        compose.waitForIdle()
+        compose.onNodeWithTag("tour").assertDoesNotExist()
+        compose.onNodeWithTag("nav:SETTINGS").performClick()
+        compose.onNodeWithTag("settings:ABOUT").performScrollTo().performClick()
+        compose.onNodeWithTag("about-tour").performScrollTo().performClick()
+        assertEquals(listOf("tour-done", "tour-again"), calls)
+    }
+
+    @Test
+    fun `the tour waits while the phone is sideways`() {
+        compose.setContent { RoomScreen(state().copy(tourPending = true), RecordingActions()) }
+        compose.onNodeWithTag("tour").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the first visit to Settings shows the two-finger way to Storage, until got it`() {
+        portrait()
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() { override fun finishStorageDemo() { calls += "demo-done" } }
+        compose.setContent { RoomScreen(state().copy(storageDemoPending = true), actions, initialPanel = Panel.SETTINGS) }
+        compose.onNodeWithTag("storage-demo").assertExists()
+        val hint = compose.onNodeWithTag("storage-hint").getBoundsInRoot()
+        assertTrue("the line it lights is on screen: $hint", hint.bottom - hint.top > 0.dp)
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/46_storage_demo.png")
+        compose.onNodeWithTag("storage-demo-done").performClick()
+        assertEquals(listOf("demo-done"), calls)
+        // The tap was the card's: the Settings row under it doesn't open as well.
+        compose.waitForIdle()
+        compose.onNodeWithTag("panel-title").assertTextEquals("SETTINGS")
+    }
+
+    @Test
+    fun `after an update with the intro on, what's new waits until the intro has handed over`() {
+        portrait()
+        compose.mainClock.autoAdvance = false
+        val notes = app.runout.update.WhatsNew.Section("1.5.0", "2026-11-08", "new things.", emptyList())
+        compose.setContent { RoomScreen(state().copy(look = Look(introOnLaunch = true), whatsNew = notes), RecordingActions()) }
+        compose.mainClock.advanceTimeBy(1_500)
+        compose.onNodeWithTag("onboarding-intro").assertExists()
+        compose.onNodeWithTag("whats-new-ok").assertDoesNotExist()
+        compose.onNodeWithTag("onboarding-intro").performClick()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithTag("onboarding-intro").assertDoesNotExist()
+        compose.onNodeWithTag("whats-new-ok").assertExists()
+    }
+
+    @Test
+    fun `a new install has the intro and vinyl only on, and turning them off sticks`() {
+        val prefs = Fixtures.context.getSharedPreferences("look", android.content.Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        assertTrue(LookPreferences(Fixtures.context).look.value.introOnLaunch)
+        assertTrue(LookPreferences(Fixtures.context).look.value.vinylOnly)
+        LookPreferences(Fixtures.context).setIntroOnLaunch(false)
+        LookPreferences(Fixtures.context).setVinylOnly(false)
+        assertFalse(LookPreferences(Fixtures.context).look.value.introOnLaunch)
+        assertFalse(LookPreferences(Fixtures.context).look.value.vinylOnly)
+        prefs.edit().clear().commit()
     }
 
     @Test
@@ -833,7 +940,8 @@ class ListeningRoomUiTest {
         compose.onNodeWithText("04 in the background").assertExists()
         compose.onNodeWithTag("toggle:Share on Wi-Fi only").performScrollTo().assertIsNotEnabled().performClick()
         compose.onNodeWithTag("upload-slots:3").performScrollTo().performClick()
-        compose.onNodeWithTag("settings-turtle").performScrollTo().performClick()
+        // A semantics click: after scrolling, a touch lands off target under Robolectric.
+        compose.onNodeWithTag("settings-turtle").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         assertEquals(listOf("turtle:true"), calls)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/soulseek_settings.png")
     }

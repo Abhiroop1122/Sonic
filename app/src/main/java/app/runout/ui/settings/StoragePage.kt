@@ -176,6 +176,7 @@ private fun Folder(f: FolderUsage, tag: String, onDelete: (RecordUsage) -> Unit)
 private fun colourOf(k: StorageKind): Color = when (k) {
     StorageKind.FLAC_HI_RES -> Room.Signal
     StorageKind.FLAC_CD -> Room.Ink
+    StorageKind.MP3 -> Room.Body
     StorageKind.OTHER_AUDIO -> Room.Accent
     StorageKind.PICTURES -> Room.Quiet
     StorageKind.PARTIAL -> Room.Warning

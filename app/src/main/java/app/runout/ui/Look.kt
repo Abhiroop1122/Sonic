@@ -30,8 +30,10 @@ enum class DeckSkin(val label: String, val asset: String?, val darkOnly: Boolean
 data class Look(
     val theme: ThemeMode = ThemeMode.PHONE,
     val deck: DeckSkin = DeckSkin.MATCH,
+    /** On for a new install (see [LookPreferences]); off here so a room built in code starts without it. */
     val introOnLaunch: Boolean = false,
     val deckLights: Boolean = false,
+    /** On for a new install (see [LookPreferences]); off here so a room built in code shows everything. */
     val vinylOnly: Boolean = false,
 ) {
     /** Whether the room is dark, given the phone's own setting. */
@@ -73,9 +75,9 @@ class LookPreferences(context: Context) {
     private fun read() = Look(
         prefs.getString(THEME, null)?.let { n -> ThemeMode.entries.firstOrNull { it.name == n } } ?: ThemeMode.PHONE,
         prefs.getString(DECK, null)?.let { n -> DeckSkin.entries.firstOrNull { it.name == n } } ?: DeckSkin.MATCH,
-        prefs.getBoolean(INTRO, false),
+        prefs.getBoolean(INTRO, true),
         prefs.getBoolean(LIGHTS, false),
-        prefs.getBoolean(VINYL_ONLY, false),
+        prefs.getBoolean(VINYL_ONLY, true),
     )
 
     private companion object {

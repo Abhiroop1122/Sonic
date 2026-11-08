@@ -199,6 +199,27 @@ class DeckLink {
     var origin by mutableStateOf(Offset.Zero)
     /** Read on landing only, so a plain field: no recomposition per frame. */
     var platterDegrees = 0f
+
+    /** Where [key]'s touch zone is on screen, in root coordinates, once the deck is laid out. */
+    fun keyRect(key: DeckKey): androidx.compose.ui.geometry.Rect? = camera?.keyBounds(key)?.translate(origin)
+
+    /** Where the two LED windows are on screen, in root coordinates. */
+    fun screenRect(): androidx.compose.ui.geometry.Rect? = camera?.screenBounds()?.translate(origin)
+}
+
+/** [key]'s touch zone (its share of the control panel), projected into the deck's box. */
+internal fun DeckCamera.keyBounds(key: DeckKey): androidx.compose.ui.geometry.Rect {
+    val y = key.centre.y
+    val corners = listOf(key.zoneMin.first, key.zoneMax.first).flatMap { x -> listOf(key.zoneMin.second, key.zoneMax.second).map { z -> project(V3(x, y, z)) } }
+    return androidx.compose.ui.geometry.Rect(corners.minOf { it.x }, corners.minOf { it.y }, corners.maxOf { it.x }, corners.maxOf { it.y })
+}
+
+/** Both LED windows' outline, projected into the deck's box. */
+internal fun DeckCamera.screenBounds(): androidx.compose.ui.geometry.Rect {
+    val (a, _) = DeckModel.titleWindow
+    val (_, b) = DeckModel.timeWindow
+    val corners = listOf(a.x, b.x).flatMap { x -> listOf(a.z, b.z).map { z -> project(V3(x, a.y, z)) } }
+    return androidx.compose.ui.geometry.Rect(corners.minOf { it.x }, corners.minOf { it.y }, corners.maxOf { it.x }, corners.maxOf { it.y })
 }
 
 @Composable
@@ -619,15 +640,11 @@ fun Turntable(
 @Composable
 private fun BoxScope.ScreenArea(cam: DeckCamera, description: String, onLongPress: (() -> Unit)?) {
     val density = LocalDensity.current
-    val (a, _) = DeckModel.titleWindow
-    val (_, b) = DeckModel.timeWindow
-    val corners = listOf(a.x, b.x).flatMap { x -> listOf(a.z, b.z).map { z -> cam.project(V3(x, a.y, z)) } }
-    val left = corners.minOf { it.x }
-    val top = corners.minOf { it.y }
+    val r = cam.screenBounds()
     Box(
         Modifier
-            .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .size(with(density) { (corners.maxOf { it.x } - left).toDp() }, with(density) { (corners.maxOf { it.y } - top).toDp() })
+            .offset { IntOffset(r.left.roundToInt(), r.top.roundToInt()) }
+            .size(with(density) { r.width.toDp() }, with(density) { r.height.toDp() })
             .testTag("deck:screen")
             .semantics {
                 contentDescription = description
@@ -642,16 +659,11 @@ private fun BoxScope.ScreenArea(cam: DeckCamera, description: String, onLongPres
 private fun BoxScope.KeyArea(cam: DeckCamera, key: DeckKey, label: String, tag: String, source: MutableInteractionSource, stateText: String? = null, enabled: Boolean = true, onClick: () -> Unit) {
     val tick = rememberTick(androidx.compose.ui.hapticfeedback.HapticFeedbackType.VirtualKey)
     val density = LocalDensity.current
-    val y = key.centre.y
-    val corners = listOf(key.zoneMin.first, key.zoneMax.first).flatMap { x -> listOf(key.zoneMin.second, key.zoneMax.second).map { z -> cam.project(V3(x, y, z)) } }
-    val left = corners.minOf { it.x }
-    val top = corners.minOf { it.y }
-    val right = corners.maxOf { it.x }
-    val bottom = corners.maxOf { it.y }
+    val r = cam.keyBounds(key)
     Box(
         Modifier
-            .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .size(with(density) { (right - left).toDp() }, with(density) { (bottom - top).toDp() })
+            .offset { IntOffset(r.left.roundToInt(), r.top.roundToInt()) }
+            .size(with(density) { r.width.toDp() }, with(density) { r.height.toDp() })
             .testTag(tag)
             .semantics { contentDescription = label; if (stateText != null) stateDescription = stateText }
             .clickable(enabled = enabled, interactionSource = source, indication = null, role = Role.Button) { tick(); onClick() },

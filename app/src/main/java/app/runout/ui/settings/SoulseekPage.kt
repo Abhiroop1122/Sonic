@@ -112,7 +112,7 @@ fun SoulseekAccountPanel(state: RoomState, actions: RoomActions, onOffline: () -
     var help by remember { mutableStateOf<TeHelp?>(null) }
     Column(Modifier.fillMaxWidth().testTag("panel:account"), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         BasicText(
-            "your local flac library is yours to play without an account. sign in to search soulseek, download from soulseek or the internet archive, and message people.",
+            "your own music folder is yours to play without an account. sign in to search soulseek, download from soulseek or the internet archive, and message people.",
             style = Room.Label.copy(color = Room.Body, lineHeight = 15.sp),
         )
         PageSection(if (session.hasAccount) "01 account · ${session.username}" else "01 account") {

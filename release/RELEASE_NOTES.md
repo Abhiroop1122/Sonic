@@ -1,34 +1,32 @@
-Sonic. 1.1.0 is the first update after 1.0.0: what the first listeners asked for, and updates from inside the app.
+Sonic. 1.5.0: MP3 from your own folder, and a walk round the room.
 
 ## What's new
 
-- **Track wheel picker.** Scroll a song under the bar and tap to play it. A song on the other side turns the record over and plays.
-- **Updates in the app.** Settings › About checks GitHub; Flags can do it once a day. The first check asks whether you want stable releases or development builds too. A newer release opens its page in your browser.
-- **Clearer audio quality.** The signal chain is back at the top of Settings › Sound, and only the step that changes the sound explains itself.
-- **Storage** shows your music beside the whole phone in one line and one bar.
-- **Shared record pictures** carry the SONIC sleeve.
-- **Fixes:** pause all and resume all, downloads with the screen off, and the gap above the keyboard in chats.
+- **MP3 in your folder.** A new switch in Settings › Flags, off by default. With it on, MP3 albums in your music folder become records too. MP3 is lossy, so its record is pressed black, never hi-res, and the signal path says "MP3 · lossy", never lossless or bit-perfect. If a folder holds the same album in FLAC and MP3, the FLAC is kept. Dig, Soulseek downloads, sharing and Friday Drops stay FLAC only.
+- **A tour of the room.** The first time the room opens, and once after this update, it lights one control at a time: start / stop, skip, eject, the crate, the record, the display, two fingers to lay the deck flat, and Settings › Flags. Use the lit control or tap next. Settings › About › how to play the deck plays it again. It replaces the old ? keys and the tilt hint.
+- **Storage, shown once.** The first time you open Settings, it shows the two-finger swipe up that opens Storage.
+- **What's new waits for the intro.** After an update it appears once the opening has handed over to the room, not on top of it.
+- **New installs** start with the intro on launch and vinyl only switched on.
+- The Bluetooth codec readout no longer risks a crash on Android 9 to 12, and names extended codecs on Android 15.
 
-The full list is in the [changelog](https://github.com/Abhiroop1122/Sonic/blob/main/CHANGELOG.md).
+Everything else is as in [1.4.2](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.2). The full list is in the [changelog](https://github.com/Abhiroop1122/Sonic/blob/main/CHANGELOG.md).
 
 ## Install
 
 - Android 9 or newer, on ARM64, ARMv7, x86-64 or x86.
-- Download `Sonic-1.1.0.apk` and `Sonic-1.1.0.apk.sha256` into one folder, then check them:
+- Download `Sonic-1.5.0.apk` and `Sonic-1.5.0.apk.sha256` into one folder, then check them:
 
   ```bash
-  sha256sum -c Sonic-1.1.0.apk.sha256        # Linux
-  shasum -a 256 -c Sonic-1.1.0.apk.sha256    # macOS
+  sha256sum -c Sonic-1.5.0.apk.sha256        # Linux
+  shasum -a 256 -c Sonic-1.5.0.apk.sha256    # macOS
   ```
 
-- It updates Sonic 1.0.0 in place (same app, same signing key). From now on, Sonic can tell you about the next one itself.
-- FLAC only.
+- It updates Sonic 1.0 to 1.4.2 in place (same app, same signing key).
+- Also in the [Sonic F-Droid repository](https://somchandra17.github.io/sonic-fdroid/repo) and through Obtainium.
 
 ## Known limits
 
-- The APK is signed with the maintainer's development key, not a production key. A future build signed with a production key would need an uninstall first, which removes Sonic's library list, chats and settings (not your music).
-- The Soulseek client still reports the experimental version 177/1.
-- Bit-perfect USB output needs a phone that offers it, and today matches 16-bit files; 24-bit output to integer-only DACs is planned.
-- Android doesn't tell apps which Bluetooth codec is in use, so Sonic says "lossy over Bluetooth" without naming it.
+- The APK is signed with the maintainer's development key, not a production key.
+- Behind carrier-grade NAT (many home ISPs, and every mobile network) no one can reach you, and no router setting changes that: you can download from, and upload to, people whose port is open, but two people who are both unreachable can't exchange files.
 
 Sonic is MIT licensed. Credits are in the [README](https://github.com/Abhiroop1122/Sonic#licence-and-credits).

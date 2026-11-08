@@ -7,6 +7,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
 import app.runout.library.TagReader
 import java.nio.ByteBuffer
@@ -45,6 +46,8 @@ class DspAudioSink(
 
     /** The file's own bit depth, told by the renderer before its decoder starts; 0 when unknown. */
     @Volatile private var sourceBits = 0
+    /** The file's lossy codec ("MP3"), or null for lossless (FLAC). A lossy file has no depth of its own. */
+    @Volatile private var lossyCodec: String? = null
 
     private var pending: ByteBuffer? = null
     private var pendingPtsUs = 0L
@@ -57,14 +60,16 @@ class DspAudioSink(
 
     /** The compressed stream about to be decoded: its bit depth is the file's. */
     fun onSourceFormat(format: Format) {
-        sourceBits = bitsOf(format.pcmEncoding)
+        lossyCodec = app.runout.library.LocalAudioPolicy.lossyCodecOfMime(format.sampleMimeType)
+        sourceBits = if (lossyCodec != null) 0 else bitsOf(format.pcmEncoding)
     }
 
     override fun getFormatSupport(format: Format): Int {
         if (!canProcess(format)) return delegate.getFormatSupport(format)
         val pure = engine.settings.value.pure
         // Pure, 16-bit file: ask the decoder for its own 16-bit samples, which then go out unchanged.
-        if (pure && format.pcmEncoding == C.ENCODING_PCM_FLOAT && sourceBits in 1..16) return AudioSink.SINK_FORMAT_SUPPORTED_WITH_TRANSCODING
+        // A lossy file (MP3) is treated as 16-bit: it never takes the deep path.
+        if (pure && format.pcmEncoding == C.ENCODING_PCM_FLOAT && (sourceBits in 1..16 || lossyCodec != null)) return AudioSink.SINK_FORMAT_SUPPORTED_WITH_TRANSCODING
         return when (val m = modeFor(format.pcmEncoding, pure)) {
             Mode.PASS -> delegate.getFormatSupport(format)
             // Everything else is taken directly, so the decoder keeps its full precision.
@@ -86,11 +91,14 @@ class DspAudioSink(
         }
         val pure = engine.settings.value.pure
         val enc = inputFormat.pcmEncoding
-        val fileBits = sourceBits.takeIf { it > 0 } ?: bitsOf(enc).takeIf { enc != C.ENCODING_PCM_FLOAT } ?: 0
+        val lossy = lossyCodec
+        val fileBits = if (lossy != null) 0 else sourceBits.takeIf { it > 0 } ?: bitsOf(enc).takeIf { enc != C.ENCODING_PCM_FLOAT } ?: 0
         mode = modeFor(enc, pure)
-        deep = when (enc) {
-            C.ENCODING_PCM_16BIT -> false
-            C.ENCODING_PCM_FLOAT -> fileBits == 0 || fileBits > 16
+        deep = when {
+            // A lossy decode is 16-bit at heart: no deep (float) path and no hi-res claims.
+            lossy != null -> false
+            enc == C.ENCODING_PCM_16BIT -> false
+            enc == C.ENCODING_PCM_FLOAT -> fileBits == 0 || fileBits > 16
             else -> true
         }
         readReplayGain(inputFormat)
@@ -114,7 +122,7 @@ class DspAudioSink(
             enc == C.ENCODING_PCM_16BIT -> C.ENCODING_PCM_16BIT
             else -> C.ENCODING_PCM_FLOAT // Pure with hi-res: Android's sink writes float, exact up to 24-bit
         }
-        engine.onStreamConfigured(this, StreamFormat(fileBits, bitsOf(enc), inputFormat.sampleRate, inputFormat.channelCount, track, deep))
+        engine.onStreamConfigured(this, StreamFormat(fileBits, bitsOf(enc), inputFormat.sampleRate, inputFormat.channelCount, track, deep, lossyCodec = lossy))
     }
 
     private fun modeFor(encoding: Int, pure: Boolean): Mode = when {
@@ -130,10 +138,10 @@ class DspAudioSink(
     // position catches up, which is up to a buffer later.
     private fun readReplayGain(format: Format) {
         val m = format.metadata ?: return engine.onStreamGains(null, null, tagged = false)
-        val comments = (0 until m.length()).mapNotNull { m[it] as? VorbisComment }
-        if (comments.isEmpty()) return engine.onStreamGains(null, null, tagged = false)
-        fun tag(key: String) = comments.firstOrNull { it.key.equals(key, ignoreCase = true) }?.value
-        engine.onStreamGains(TagReader.gain(tag("REPLAYGAIN_ALBUM_GAIN")), TagReader.gain(tag("REPLAYGAIN_TRACK_GAIN")), tagged = true)
+        val entries = (0 until m.length()).map { m[it] }
+        val tags = replayGainTags(entries)
+        if (tags == null) return engine.onStreamGains(null, null, tagged = false)
+        engine.onStreamGains(TagReader.gain(tags["REPLAYGAIN_ALBUM_GAIN"]), TagReader.gain(tags["REPLAYGAIN_TRACK_GAIN"]), tagged = true)
     }
 
     override fun handleBuffer(buffer: ByteBuffer, presentationTimeUs: Long, encodedAccessUnitCount: Int): Boolean {
@@ -286,6 +294,20 @@ class DspAudioSink(
     }
 
     companion object {
+        /**
+         * The stream's own tags, upper-cased: FLAC's Vorbis comments, or MP3's ID3 TXXX frames
+         * (REPLAYGAIN_TRACK_GAIN and friends). Null when the stream carries neither.
+         */
+        fun replayGainTags(entries: List<androidx.media3.common.Metadata.Entry>): Map<String, String>? {
+            val comments = entries.filterIsInstance<VorbisComment>()
+            val frames = entries.filterIsInstance<TextInformationFrame>().filter { it.id == "TXXX" && it.description?.startsWith("REPLAYGAIN_", ignoreCase = true) == true }
+            if (comments.isEmpty() && frames.isEmpty()) return null
+            val out = mutableMapOf<String, String>()
+            comments.forEach { out.putIfAbsent(it.key.uppercase(), it.value) }
+            frames.forEach { f -> f.values.firstOrNull()?.let { out.putIfAbsent(f.description!!.uppercase(), it) } }
+            return out
+        }
+
         fun canProcess(f: Format): Boolean =
             MimeTypes.AUDIO_RAW == f.sampleMimeType && f.pcmEncoding in setOf(
                 C.ENCODING_PCM_16BIT, C.ENCODING_PCM_24BIT, C.ENCODING_PCM_32BIT, C.ENCODING_PCM_FLOAT,

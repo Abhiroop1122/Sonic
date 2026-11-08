@@ -13,10 +13,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** What a folder's bytes are: the FLAC that plays, split by resolution, and everything around it. */
+/**
+ * What a folder's bytes are: the FLAC that plays, split by resolution, the MP3 (which plays with
+ * Settings › Flags › MP3 in your folder on), and everything around it. The order is the display order.
+ */
 enum class StorageKind(val label: String) {
     FLAC_HI_RES("hi-res flac"),
     FLAC_CD("cd-quality flac"),
+    MP3("mp3"),
     OTHER_AUDIO("other audio"),
     PICTURES("pictures"),
     PARTIAL("unfinished downloads"),
@@ -152,7 +156,9 @@ class StorageAnalyzer(private val context: Context) {
     }.getOrNull()
 
     companion object {
-        private val OTHER_AUDIO = setOf("mp3", "m4a", "aac", "ogg", "oga", "opus", "wav", "aif", "aiff", "alac", "ape", "wv", "dsf", "dff", "wma", "mka")
+        private val OTHER_AUDIO = setOf("m4a", "aac", "ogg", "oga", "opus", "wav", "aif", "aiff", "alac", "ape", "wv", "dsf", "dff", "wma", "mka")
+        /** The kinds that make up a record's own size. */
+        private val RECORD_AUDIO = setOf(StorageKind.FLAC_HI_RES, StorageKind.FLAC_CD, StorageKind.MP3, StorageKind.OTHER_AUDIO)
         private val PICTURES = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic")
 
         fun kindOf(name: String, hiRes: Boolean): StorageKind {
@@ -160,6 +166,7 @@ class StorageAnalyzer(private val context: Context) {
             if (lower.endsWith(".part") || lower.endsWith(".sonic-part")) return StorageKind.PARTIAL
             return when (lower.substringAfterLast('.', "")) {
                 "flac" -> if (hiRes) StorageKind.FLAC_HI_RES else StorageKind.FLAC_CD
+                "mp3" -> StorageKind.MP3
                 in OTHER_AUDIO -> StorageKind.OTHER_AUDIO
                 in PICTURES -> StorageKind.PICTURES
                 else -> StorageKind.OTHER
@@ -210,7 +217,7 @@ class StorageAnalyzer(private val context: Context) {
                     kinds[kind] = (kinds[kind] ?: 0L) + e.size
                     bytes += e.size
                     files++
-                    if (kind == StorageKind.FLAC_HI_RES || kind == StorageKind.FLAC_CD || kind == StorageKind.OTHER_AUDIO) audio += e.size
+                    if (kind in RECORD_AUDIO) audio += e.size
                 }
                 progress(children.count { !it.isDir })
                 if (audio > 0) records += id to RecordUsage(
