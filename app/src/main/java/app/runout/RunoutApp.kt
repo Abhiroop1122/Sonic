@@ -87,7 +87,7 @@ class AppGraph(app: Application) {
     val library = LibraryRepository(app, LibraryScanner(app), artwork, scope)
     val sound = SoundEngine(app)
     val sfx = VinylSfx(scope)
-    val deck = Deck(app, sfx, scope, sound)
+    val deck = Deck(app, sfx, scope, sound, allowMp3 = { library.mp3Local.value })
     val look = LookPreferences(app)
     val storage = StorageAnalyzer(app)
     val updates = Updates(app, http, BuildConfig.VERSION_NAME)
