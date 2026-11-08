@@ -180,7 +180,7 @@ internal fun StorageDemo(hint: Rect, onDone: () -> Unit, modifier: Modifier = Mo
     val rise by rememberInfiniteTransition(label = "storage-demo").animateFloat(
         0f, 1f, infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "fingers",
     )
-    BoxWithConstraints(modifier.fillMaxSize().testTag("storage-demo")) {
+    Box(modifier.fillMaxSize().testTag("storage-demo")) {
         Spotlight(hole, round = false, Modifier.fillMaxSize())
         // Two fingertips sliding up from below the line, their trail fading behind them.
         Canvas(Modifier.fillMaxSize()) {
