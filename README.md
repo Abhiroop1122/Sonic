@@ -74,9 +74,9 @@ The home screen is a listening room. The crate sits under the deck, and the deck
   share.
 
 <p align="center">
-  <img src="docs/images/screens/room-light.png" width="300" alt="The room in light: a white and teal turntable playing Paper Moons above a crate of sleeves, the track list below" />
+  <img src="docs/images/screens/room-light.png" width="300" alt="The room in light: a white and teal turntable playing Blonde above a crate of sleeves, the track list below" />
   &nbsp;&nbsp;
-  <img src="docs/images/screens/room-dark.png" width="300" alt="The room in dark: a black turntable on a true-black screen, the same crate and sleeves" />
+  <img src="docs/images/screens/room-dark.png" width="300" alt="The room in dark: the neon deck drawn in glowing white edges on a true-black screen, the same crate and sleeves" />
 </p>
 
 Turn the phone sideways and the room fills the screen, as in the demo at the top. Sideways is just
@@ -99,9 +99,9 @@ for listening; the other pages wait until you turn it back.
   it's whole.
 
 <p align="center">
-  <img src="docs/images/screens/drops-light.png" width="260" alt="Friday Drops: this week's Creative Commons albums on white tiles, with three claim lights" />
+  <img src="docs/images/screens/drops-light.png" width="260" alt="Friday Drops: this week's Creative Commons albums on white tiles, with three claim lights and one record already in the crate" />
   &nbsp;
-  <img src="docs/images/screens/details-light.png" width="260" alt="Record details for Paper Moons: sides A and B with each track's time and the total, 21:20" />
+  <img src="docs/images/screens/details-light.png" width="260" alt="Record details for Blonde: sides A and B with each track's time and the total, 1:00:17" />
   &nbsp;
   <img src="docs/images/screens/dig-light.png" width="260" alt="Dig: a search box, on this device or Soulseek, and a dotted question mark while it's empty" />
 </p>
@@ -115,15 +115,15 @@ for listening; the other pages wait until you turn it back.
   teal in light, neon in dark.
 - **Vinyl only.** Sideways, everything but the deck goes black; a tap brings the room back.
 - **Flags** for the small habits: turn the record over by itself, start playing as soon as it
-  lands, a sleep timer that fades the music and lifts the needle, and the intro every time the
-  app opens.
+  lands, a sleep timer that fades the music and lifts the needle, the intro every time the app
+  opens, and MP3s from your own folder (off by default; Dig and sharing stay FLAC only).
 
 <p align="center">
-  <img src="docs/images/screens/flags-light.png" width="260" alt="Flags in light: switches for auto-flip, auto-play, sleep mode and intro on launch, then theme and deck pickers" />
+  <img src="docs/images/screens/flags-light.png" width="260" alt="Flags in light: switches for auto-flip, auto-play, sleep mode, intro on launch and MP3 in your folder, then theme and deck pickers" />
   &nbsp;
   <img src="docs/images/screens/flags-dark.png" width="260" alt="The same Flags page in dark, with dark picked" />
   &nbsp;
-  <img src="docs/images/screens/settings-dark.png" width="260" alt="Settings in dark: sound, flags, library, soulseek and about, and a hint to swipe up with two fingers" />
+  <img src="docs/images/screens/settings-dark.png" width="260" alt="Settings in dark: sound, flags, library, soulseek, connection and about, and a hint to swipe up with two fingers" />
 </p>
 
 ### Your shelf
@@ -136,9 +136,9 @@ You can delete a record you no longer want, folder and files. The warning flips 
 theme's colours so it can't be missed.
 
 <p align="center">
-  <img src="docs/images/screens/storage-dark.png" width="260" alt="Storage: the phone's space, the music folder at 10 MB in 38 files, a bar split by kind, and records largest first with delete keys" />
+  <img src="docs/images/screens/storage-dark.png" width="260" alt="Storage: the music folder at 31.1 GB in 694 files and 46 records, a bar split into hi-res and CD-quality FLAC, and records largest first with delete keys" />
   &nbsp;
-  <img src="docs/images/screens/delete-dark.png" width="260" alt="A white warning sheet over the dark page: delete record, Blue Static, your album will be deleted, keep it or delete" />
+  <img src="docs/images/screens/delete-dark.png" width="260" alt="A white warning sheet over the dark page: delete record, ultrasound, your album will be deleted, keep it or delete" />
 </p>
 
 ### Sound

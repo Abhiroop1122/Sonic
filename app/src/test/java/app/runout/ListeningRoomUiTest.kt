@@ -648,6 +648,9 @@ class ListeningRoomUiTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/46_storage_demo.png")
         compose.onNodeWithTag("storage-demo-done").performClick()
         assertEquals(listOf("demo-done"), calls)
+        // The tap was the card's: the Settings row under it doesn't open as well.
+        compose.waitForIdle()
+        compose.onNodeWithTag("panel-title").assertTextEquals("SETTINGS")
     }
 
     @Test
