@@ -95,8 +95,12 @@ object AlbumJson {
     }
 
     /** Validation is a view, never a migration: losing a grant must not erase a pressing. */
-    fun readValidatedList(context: Context, file: File): List<Album> = readList(file).map { album ->
-        val available = album.tracks.isNotEmpty() && album.tracks.all { FlacPolicy.read(context, it) != null }
+    fun readValidatedList(context: Context, file: File, policy: LocalAudioPolicy = LocalAudioPolicy.FLAC_ONLY): List<Album> =
+        validated(context, readList(file), policy)
+
+    /** [albums] marked available or not under [policy]; the folder shelf passes its own, everything else FLAC. */
+    fun validated(context: Context, albums: List<Album>, policy: LocalAudioPolicy = LocalAudioPolicy.FLAC_ONLY): List<Album> = albums.map { album ->
+        val available = album.tracks.isNotEmpty() && album.tracks.all { policy.read(context, it) != null }
         album.copy(unavailableReason = if (available) null else "Unavailable · repair access")
     }
 

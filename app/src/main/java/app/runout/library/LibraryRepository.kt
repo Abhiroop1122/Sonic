@@ -57,6 +57,38 @@ class LibraryRepository(
     }
     private var coverJob: Job? = null
 
+    private val localAudioPrefs = context.getSharedPreferences(MP3_PREFS, Context.MODE_PRIVATE)
+    private val _mp3Local = MutableStateFlow(localAudioPrefs.getBoolean(KEY_MP3, false))
+    /** Settings › Flags › MP3 in your folder: MP3 files in the music folder are records too. Off by default. */
+    val mp3Local: StateFlow<Boolean> = _mp3Local.asStateFlow()
+
+    /** What the music folder admits right now: FLAC, and MP3 with [mp3Local] on. */
+    val localPolicy: LocalAudioPolicy get() = LocalAudioPolicy.of(_mp3Local.value)
+
+    /**
+     * Switched on: the folder is read again, now with its MP3s. Switched off: the MP3 records leave
+     * the shelf at once, and a fresh scan rebuilds it from the FLAC alone. The
+     * caller ejects an MP3 record that is on the platter. Returns the scan, when one started.
+     */
+    fun setMp3Local(on: Boolean): Job? {
+        if (_mp3Local.value == on) return null
+        localAudioPrefs.edit(commit = true) { putBoolean(KEY_MP3, on) }
+        _mp3Local.value = on
+        return if (on) {
+            rescan()
+        } else {
+            // The saved index follows when the scan finishes; until then a restart filters it too.
+            synchronized(scanLock) {
+                scanJob?.cancel()
+                _albums.value = withoutMp3(_albums.value)
+            }
+            repair()
+        }
+    }
+
+    /** The shelf the current setting allows: with MP3 off, no MP3 track (and no record left without tracks). */
+    private fun allowed(list: List<Album>): List<Album> = if (_mp3Local.value) list else withoutMp3(list)
+
     fun dismissCoverLookupNotice() {
         coverPrefs.edit { putBoolean("notice-pending", false) }
         _coverLookupNoticePending.value = false
@@ -79,7 +111,7 @@ class LibraryRepository(
 
     init {
         scope.launch {
-            val cached = withContext(Dispatchers.IO) { AlbumJson.readValidatedList(context, cacheFile) }
+            val cached = withContext(Dispatchers.IO) { AlbumJson.validated(context, allowed(AlbumJson.readList(cacheFile)), localPolicy) }
             if (_albums.value.isEmpty()) _albums.value = cached
             // Cached shelf but a folder that may have changed: refresh quietly.
             val tree = _folder.value
@@ -154,13 +186,16 @@ class LibraryRepository(
             _report.value = null
             // An older Sonic's covers in this folder's thumbnails/ stay out of the photo gallery.
             withContext(Dispatchers.IO) { runCatching { GalleryPrivacy.hideLeftovers(context, androidx.documentfile.provider.DocumentFile.fromTreeUri(context, tree)) } }
-            val previous = if (replace) emptyList() else _albums.value
+            val mp3 = _mp3Local.value
+            // With MP3 off, no MP3 record from before survives a partial scan or a failed one.
+            val previous = if (replace) emptyList() else if (mp3) _albums.value else withoutMp3(_albums.value)
             if (fresh || replace) _albums.value = emptyList()
             if (replace) withContext(Dispatchers.IO) { AlbumJson.writeList(cacheFile, emptyList()) }
             val found = mutableListOf<Album>()
             val report = try {
                 scanner.scan(
                     treeUri = tree,
+                    mp3 = mp3,
                     onProgress = { p -> _scan.value = ScanState.Scanning(p) },
                     onAlbum = { s ->
                         val album = withContext(Dispatchers.IO) {
@@ -222,6 +257,9 @@ class LibraryRepository(
 
     companion object {
         private const val KEY_FOLDER = "folder"
+        /** Where Settings › Flags › MP3 in your folder is kept. */
+        const val MP3_PREFS = "local-audio"
+        const val KEY_MP3 = "mp3"
 
         /**
          * A partial scan's shelf: everything it read, plus whatever it couldn't see from before.
@@ -236,6 +274,12 @@ class LibraryRepository(
                 else now.copy(tracks = (now.tracks + missing).sortedWith(compareBy({ it.discNumber }, { it.trackNumber }, { it.fileName })))
             }
             return merged + previous.filter { it.id !in byId }
+        }
+
+        /** Folder records without their MP3 tracks; a record that was only MP3 leaves. */
+        fun withoutMp3(list: List<Album>): List<Album> = list.mapNotNull { album ->
+            if (album.tracks.none(LocalAudioPolicy::isMp3Track)) album
+            else album.tracks.filterNot(LocalAudioPolicy::isMp3Track).takeIf { it.isNotEmpty() }?.let { album.copy(tracks = it) }
         }
 
         fun sortShelf(list: List<Album>): List<Album> =
