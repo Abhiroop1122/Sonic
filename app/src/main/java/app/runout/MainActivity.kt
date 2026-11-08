@@ -96,6 +96,8 @@ class MainActivity : ComponentActivity() {
             val newDrop by graph.drops.newDrop.collectAsStateWithLifecycle()
             val deckFlags by graph.deck.flags.collectAsStateWithLifecycle()
             val look by graph.look.look.collectAsStateWithLifecycle()
+            val tourPending by graph.tour.tourPending.collectAsStateWithLifecycle()
+            val storageDemoPending by graph.tour.storageDemoPending.collectAsStateWithLifecycle()
             val storage by graph.storage.state.collectAsStateWithLifecycle()
             val update by graph.updates.state.collectAsStateWithLifecycle()
             val autoUpdates by graph.updates.auto.collectAsStateWithLifecycle()
@@ -272,6 +274,9 @@ class MainActivity : ComponentActivity() {
                     override fun setVinylOnly(on: Boolean) = graph.look.setVinylOnly(on)
                     override fun checkForUpdates() { graph.scope.launch { graph.updates.check() } }
                     override fun showWhatsNew() = graph.whatsNew.show()
+                    override fun finishTour() = graph.tour.finishTour()
+                    override fun replayTour() = graph.tour.replayTour()
+                    override fun finishStorageDemo() = graph.tour.finishStorageDemo()
                     override fun dismissWhatsNew() = graph.whatsNew.dismiss()
                     override fun setAutoUpdates(enabled: Boolean) = graph.updates.setAuto(enabled)
                     override fun setUpdateChannel(channel: app.runout.update.UpdateChannel) = graph.updates.setChannel(channel)
@@ -399,6 +404,8 @@ class MainActivity : ComponentActivity() {
                     soulseekReachability = reachability,
                     soulseekShelf = shelf,
                     whatsNew = whatsNew,
+                    tourPending = tourPending,
+                    storageDemoPending = storageDemoPending,
                     soulseekContacts = contacts,
                     soulseekConversations = conversations,
                     soulseekConversation = selectedConversation,

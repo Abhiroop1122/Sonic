@@ -577,6 +577,53 @@ class ListeningRoomUiTest {
     }
 
     @Test
+    fun `an update brings the tour once, upright only, and About plays it again`() {
+        portrait()
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() {
+            override fun finishTour() { calls += "tour-done" }
+            override fun replayTour() { calls += "tour-again" }
+        }
+        var s by mutableStateOf(state().copy(tourPending = true))
+        compose.setContent { RoomScreen(s, actions) }
+        compose.onNodeWithTag("tour").assertExists()
+        compose.onNodeWithTag("tour-step").assertTextEquals("1 / 9")
+        // Walked to the end: the last stop lights the settings key and says done.
+        repeat(8) { compose.onNodeWithTag("tour-next").performClick() }
+        compose.onNodeWithTag("tour-title").assertTextEquals("flags")
+        compose.onNodeWithTag("tour-next").assertTextEquals("done").performClick()
+        assertEquals(listOf("tour-done"), calls)
+        // Done, it's gone; About's "how to play the deck" asks for it again.
+        s = s.copy(tourPending = false)
+        compose.waitForIdle()
+        compose.onNodeWithTag("tour").assertDoesNotExist()
+        compose.onNodeWithTag("nav:SETTINGS").performClick()
+        compose.onNodeWithTag("settings:ABOUT").performScrollTo().performClick()
+        compose.onNodeWithTag("about-tour").performScrollTo().performClick()
+        assertEquals(listOf("tour-done", "tour-again"), calls)
+    }
+
+    @Test
+    fun `the tour waits while the phone is sideways`() {
+        compose.setContent { RoomScreen(state().copy(tourPending = true), RecordingActions()) }
+        compose.onNodeWithTag("tour").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the first visit to Settings shows the two-finger way to Storage, until got it`() {
+        portrait()
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() { override fun finishStorageDemo() { calls += "demo-done" } }
+        compose.setContent { RoomScreen(state().copy(storageDemoPending = true), actions, initialPanel = Panel.SETTINGS) }
+        compose.onNodeWithTag("storage-demo").assertExists()
+        val hint = compose.onNodeWithTag("storage-hint").getBoundsInRoot()
+        assertTrue("the line it lights is on screen: $hint", hint.bottom - hint.top > 0.dp)
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/46_storage_demo.png")
+        compose.onNodeWithTag("storage-demo-done").performClick()
+        assertEquals(listOf("demo-done"), calls)
+    }
+
+    @Test
     fun `after an update with the intro on, what's new waits until the intro has handed over`() {
         portrait()
         compose.mainClock.autoAdvance = false

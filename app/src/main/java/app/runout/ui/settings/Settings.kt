@@ -60,6 +60,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
@@ -136,6 +137,7 @@ fun SettingsPanel(
     onDownloads: () -> Unit,
     onSetup: () -> Unit,
     onOffline: () -> Unit,
+    onStorageHint: (androidx.compose.ui.geometry.Rect?) -> Unit = {},
 ) {
     AnimatedContent(
         targetState = section,
@@ -150,7 +152,7 @@ fun SettingsPanel(
         },
         label = "settings-page",
     ) { shown ->
-        if (shown == null) SettingsHome(state, actions, onSection)
+        if (shown == null) SettingsHome(state, actions, onSection, onStorageHint)
         else SettingsPage(state, actions, shown, onSection, onDownloads, onSetup, onOffline)
     }
 }
@@ -160,7 +162,7 @@ fun SettingsPanel(
  * wordmark set faint at the foot.
  */
 @Composable
-private fun SettingsHome(state: RoomState, actions: RoomActions, onSection: (SettingsSection?) -> Unit) {
+private fun SettingsHome(state: RoomState, actions: RoomActions, onSection: (SettingsSection?) -> Unit, onStorageHint: (androidx.compose.ui.geometry.Rect?) -> Unit) {
     val found = rememberTick(HapticFeedbackType.GestureThresholdActivate)
     Column(
         Modifier
@@ -177,7 +179,9 @@ private fun SettingsHome(state: RoomState, actions: RoomActions, onSection: (Set
                 TeRow("%02d".format(i + 1), s.label.lowercase(), summary(s, state), { onSection(s) }, Modifier.testTag("settings:${s.name}"))
             }
         }
-        StorageHint()
+        // Where its line sits, for the storage demo on the first visit; gone once the list is.
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onStorageHint(null) } }
+        StorageHint(Modifier.onGloballyPositioned { onStorageHint(it.boundsInRoot()) })
         Spacer(Modifier.weight(1f))
         // The wordmark set huge and faint underneath, like a manual's back page.
         BrandText(brandMark(Room.HairlineSoft), Room.Display.copy(fontSize = 66.sp, color = Room.HairlineSoft), Modifier.clearAndSetSemantics {})
@@ -186,11 +190,11 @@ private fun SettingsHome(state: RoomState, actions: RoomActions, onSection: (Set
 
 /** Two fingers rising and settling, and what they open. */
 @Composable
-private fun StorageHint() {
+private fun StorageHint(modifier: Modifier = Modifier) {
     val bob = rememberInfiniteTransition(label = "storage-hint")
     val lift by bob.animateFloat(0f, -1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "lift")
     Row(
-        Modifier.fillMaxWidth().testTag("storage-hint").semantics(mergeDescendants = true) {},
+        modifier.fillMaxWidth().testTag("storage-hint").semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -451,6 +455,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.AboutPage(state: Room
         BasicText(if (BuildConfig.DEBUG) "development build · rg-1 v3" else "rg-1 v3", style = Room.LabelQuiet)
         UpdateLine(state, actions)
         TeLink("what's new in this version", actions::showWhatsNew, tag = "about-whats-new")
+        TeLink("how to play the deck", actions::replayTour, tag = "about-tour")
     }
 }
 

@@ -1,6 +1,9 @@
 package app.runout
 
 import android.app.Application
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -12,6 +15,7 @@ import app.runout.playback.DeckState
 import app.runout.ui.RoomScreen
 import app.runout.ui.RoomState
 import com.github.takahirom.roborazzi.captureRoboImage
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -68,22 +72,35 @@ class OnboardingHandoffTest {
     @Config(qualifiers = "w892dp-h412dp-xhdpi")
     @Test fun `the welcome's deck is the room's deck, in landscape`() = welcomeOverRoom("41_handoff_landscape")
 
-    @Test fun `the room's first look shows the two-finger hint over the deck, once`() {
+    @Test fun `after onboarding the tour walks the room, and trying a lit control moves it on`() {
         compose.mainClock.autoAdvance = false
-        compose.setContent { RoomScreen(atWelcome, RecordingActions()) }
+        val calls = mutableListOf<String>()
+        val actions = object : RecordingActions() { override fun finishTour() { calls += "tour-done" } }
+        compose.setContent { RoomScreen(atWelcome.copy(tourPending = true), actions) }
         compose.mainClock.advanceTimeBy(700)
         compose.onNodeWithTag("setup-welcome").performClick()
         compose.mainClock.advanceTimeBy(2500)
-        compose.onNodeWithTag("tilt-hint").assertExists()
-        val deck = compose.onNodeWithTag("turntable").getBoundsInRoot()
-        val hint = compose.onNodeWithTag("tilt-hint").getBoundsInRoot()
-        assertTrue("the hint sits on the deck: $hint in $deck", hint.top >= deck.top && hint.bottom <= deck.bottom)
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/43_tilt_hint.png")
-        compose.onNodeWithTag("tilt-hint-done").performClick()
-        compose.mainClock.advanceTimeBy(500)
-        compose.onNodeWithTag("tilt-hint").assertDoesNotExist()
-        val prefs = Fixtures.context.getSharedPreferences("room", android.content.Context.MODE_PRIVATE)
-        assertTrue("seen once, never again", prefs.getBoolean("tilt_hint_seen", false))
+        compose.onNodeWithTag("tour-step").assertTextEquals("1 / 9")
+        compose.onNodeWithTag("tour-title").assertTextEquals("your record player")
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/44_tour_1_deck.png")
+        // Keys low on the page are pressed by their action: Robolectric taps land off there.
+        compose.onNodeWithTag("tour-next").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithTag("tour-title").assertTextEquals("start / stop")
+        // The card stands clear of the key it lights.
+        val key = compose.onNodeWithTag("deck:startstop").getBoundsInRoot()
+        val card = compose.onNodeWithTag("tour-card").getBoundsInRoot()
+        assertTrue("card $card clear of key $key", card.top >= key.bottom || card.bottom <= key.top)
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/45_tour_2_start_stop.png")
+        // The key still works through the spotlight, and using it is the same as next.
+        compose.onNodeWithTag("deck:startstop").performClick()
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithTag("tour-title").assertTextEquals("skip")
+        compose.onNodeWithTag("tour-skip").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(300)
+        assertEquals(listOf("tour-done"), calls)
     }
 
     @Test fun `the intro draws its deck where the room's will be`() {

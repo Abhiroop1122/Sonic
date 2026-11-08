@@ -209,6 +209,10 @@ data class RoomState(
     val soulseekShelf: app.runout.soulseek.SoulseekShelf? = null,
     /** This version's notes, on the first launch after an update or from About. */
     val whatsNew: app.runout.update.WhatsNew.Section? = null,
+    /** The first-start tour of the room is still to be shown (a new install, an update, or About asked). */
+    val tourPending: Boolean = false,
+    /** The two-finger storage demo is still to be shown on the first visit to Settings. */
+    val storageDemoPending: Boolean = false,
     val turtleMode: Boolean = false,
     /** This week's Friday Drop hasn't been opened yet. */
     val newDrop: Boolean = false,
@@ -360,6 +364,9 @@ interface RoomActions : DeckActions {
     fun openSoulseekFolder(username: String, directory: String) {}
     fun browseSoulseekShelf(username: String) {}
     fun showWhatsNew() {}
+    fun finishTour() {}
+    fun replayTour() {}
+    fun finishStorageDemo() {}
     fun dismissWhatsNew() {}
     fun closeSoulseekShelf() {}
     fun confirmSoulseekFolder() {}
@@ -473,16 +480,12 @@ fun RoomScreen(
     }
     // The room's entrance after onboarding, around the deck (which never moves): 1 is fully in.
     val entry = remember { Animatable(1f) }
-    // Once, as the room first comes in after onboarding: the deck turns with two fingers.
-    val roomPrefs = remember { appContext.getSharedPreferences("room", android.content.Context.MODE_PRIVATE) }
-    var tiltHint by remember { mutableStateOf(false) }
-    val doneTiltHint = { tiltHint = false; roomPrefs.edit().putBoolean(TILT_HINT_KEY, true).apply() }
-    // Turning the deck is the answer: the hint goes as soon as the view changes.
-    DisposableEffect(roomPrefs) {
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key == "deck_flat" && tiltHint) doneTiltHint() }
-        roomPrefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose { roomPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }
+    // The first-start tour (TE · Tour): which stop it's at while it's pending.
+    var tourStep by rememberSaveable { mutableIntStateOf(0) }
+    // Where the nav bar's settings key is, for the tour's last stop.
+    var settingsCell by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    // Where Settings' "swipe up with two fingers" line is, for the storage demo.
+    var storageHint by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     // How high the disc is held (its scale), and how far it has turned since it left the sleeve.
     val lift = remember { Animatable(1f) }
     val spin = remember { Animatable(0f) }
@@ -508,13 +511,18 @@ fun RoomScreen(
     val current by rememberUpdatedState(state)
     // The record in front of the crate, for the caption under it.
     var frontId by remember { mutableStateOf<String?>(null) }
-    // First time in the room: the three "?" helps show until a record first lands on the platter.
-    val prefs = remember { appContext.getSharedPreferences("room", android.content.Context.MODE_PRIVATE) }
-    var roomHelps by remember { mutableStateOf(!prefs.getBoolean("helps_done", false) && state.deck.album == null) }
-    LaunchedEffect(state.deck.album != null) {
-        if (state.deck.album != null && roomHelps) { roomHelps = false; prefs.edit().putBoolean("helps_done", true).apply() }
+    // Using the control the tour is lighting moves it on, as "next" does.
+    fun tourDid(at: Int) {
+        if (!current.tourPending || tourStep != at) return
+        if (at == TOUR.lastIndex) actions.finishTour() else tourStep = at + 1
     }
-    var roomHelp by remember { mutableStateOf<TeHelp?>(null) }
+    // Turning the deck with two fingers answers the "look closer" stop.
+    val roomPrefs = remember { appContext.getSharedPreferences("room", android.content.Context.MODE_PRIVATE) }
+    DisposableEffect(roomPrefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key == "deck_flat") tourDid(TourAt.FINGERS) }
+        roomPrefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { roomPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     var detailsFor by remember { mutableStateOf<String?>(null) }
     val pickUp = rememberTick(androidx.compose.ui.hapticfeedback.HapticFeedbackType.GestureThresholdActivate)
     val landed = rememberTick(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm)
@@ -524,7 +532,11 @@ fun RoomScreen(
     // The deck's Eject key, with the flight home when the 3D record can make it; otherwise at once.
     val deckActions = remember(actions) {
         object : DeckActions by actions {
+            override fun startStop() { actions.startStop(); tourDid(TourAt.START_STOP) }
+            override fun nextTrack() { actions.nextTrack(); tourDid(TourAt.SKIP) }
+            override fun previousTrack() { actions.previousTrack(); tourDid(TourAt.SKIP) }
             override fun eject() {
+                tourDid(TourAt.EJECT)
                 val st = current
                 val record = st.deck.album
                 val fly = record != null && pulledId == null && ejecting == null && platterCenter != null &&
@@ -716,7 +728,6 @@ fun RoomScreen(
                 )
             }
             val front = state.albums.firstOrNull { it.id == frontId } ?: state.albums.firstOrNull()
-            val help = @Composable { h: TeHelp, m: Modifier -> if (roomHelps) HelpKey(h.title, m) { roomHelp = h } }
 
             if (portrait) {
                 // TE · Home: top bar, the deck's band, the crate, its caption and the track wheel, with
@@ -729,7 +740,7 @@ fun RoomScreen(
                         .padding(bottom = NAV_HEIGHT),
                 ) {
                     Box(rise) { TopBar(state, onDownloads = { panel = Panel.DOWNLOADS; pulledId = null }, onAccount = openAccount, onSleep = { sleepOpen = true }) }
-                    DeckBand(state, empty = state.albums.isEmpty(), deckAlpha = { deckAlpha }, chrome = rise, help = { help(HELP_LED, it) }) { turntable(it, Alignment.Center) }
+                    DeckBand(state, empty = state.albums.isEmpty(), deckAlpha = { deckAlpha }, chrome = rise) { turntable(it, Alignment.Center) }
                     // Everything under the deck in one column (the weights share its height as before), so it can rise in as one.
                     Column(Modifier.fillMaxWidth().weight(1f).then(rise)) {
                         if (state.albums.isEmpty()) {
@@ -737,14 +748,10 @@ fun RoomScreen(
                         } else {
                             Box(Modifier.fillMaxWidth().weight(301f)) {
                                 crate(Modifier.fillMaxSize(), CrateGeometry.Portrait)
-                                if (roomHelps) Row(Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    BasicText("how the crate works", style = Room.LabelQuiet)
-                                    HelpKey(HELP_CRATE.title, Modifier) { roomHelp = HELP_CRATE }
-                                }
                             }
                             front?.let { AlbumCaption(it, portrait = true) }
                             Box(Modifier.fillMaxWidth().weight(105f).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
-                                TrackWheel(state, actions, rows = 4, help = { help(HELP_WHEEL, it) })
+                                TrackWheel(state, actions, rows = 4)
                             }
                         }
                     }
@@ -1101,6 +1108,7 @@ fun RoomScreen(
                 Panel.SETTINGS -> SettingsPanel(
                     state, actions, settings, { settings = it },
                     onDownloads = { goTo(Panel.DOWNLOADS) }, onSetup = openSetup, onOffline = { closePanel() },
+                    onStorageHint = { storageHint = it },
                 )
                 Panel.DOWNLOADS -> SoulseekTransfersPanel(state, actions, onDig = { goTo(Panel.DIG) })
                 Panel.SIGNAL -> SignalPanel(state, actions, onSoundSettings = { settings = SettingsSection.SOUND; goTo(Panel.SETTINGS) })
@@ -1180,7 +1188,7 @@ fun RoomScreen(
                         if (it == Panel.DROPS) actions.listen(null)
                         home++
                     }
-                    if (it == Panel.SETTINGS) settings = null
+                    if (it == Panel.SETTINGS) { settings = null; tourDid(TourAt.FLAGS) }
                     // Friends always opens on its own page, not on the last chat.
                     if (it == Panel.FRIENDS) { ignoreChat = state.soulseekConversation; actions.closeSoulseekConversation() }
                     // A folder preview belongs to Dig's visit: leaving Dig, or tapping it again, closes it.
@@ -1192,6 +1200,7 @@ fun RoomScreen(
                 },
                 onHome = if (page != null) ({ closePanel() }) else null,
                 upright = portrait,
+                onCellPlaced = { p, r -> if (p == Panel.SETTINGS) settingsCell = r },
                 modifier = Modifier
                     .align(if (portrait) Alignment.BottomCenter else Alignment.BottomEnd)
                     .then(if (portrait) Modifier else Modifier.fillMaxWidth(LANDSCAPE_ROOM))
@@ -1219,7 +1228,6 @@ fun RoomScreen(
                         scope.launch {
                             entry.snapTo(0f)
                             entry.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 200f))
-                            if (!roomPrefs.getBoolean(TILT_HINT_KEY, false)) tiltHint = true
                         }
                     },
                     intro = firstRun && setupStart == 0,
@@ -1245,17 +1253,47 @@ fun RoomScreen(
             }
         }
 
-        // The two-finger hint, at the foot of the deck. It takes no touches but its own "got it", so
-        // the deck under it still turns.
-        val hintAt = deckSpot.rect
-        if (tiltHint && !setupOpen && panel == null && hintAt != null) {
-            TiltHint(
-                Modifier
-                    .zIndex(10.5f)
-                    .offset { IntOffset(hintAt.left.roundToInt(), hintAt.top.roundToInt()) }
-                    .size(with(density) { hintAt.width.toDp() }, with(density) { hintAt.height.toDp() }),
-                onDone = doneTiltHint,
+        // The first-start tour (TE · Tour), once the room is up: after onboarding, the intro and
+        // What's new, with no page open or record in hand, and upright. About's "how to play the
+        // deck" starts it again from the deck.
+        LaunchedEffect(state.tourPending) { if (state.tourPending) { tourStep = 0; if (panel != null) closePanel() } }
+        val touring = state.tourPending && !setupOpen && !launchIntro && state.whatsNew == null &&
+            panel == null && pulledId == null && portrait && !entry.isRunning
+        if (touring) {
+            fun inRoom(r: androidx.compose.ui.geometry.Rect?) = r?.translate(-rootOrigin)
+            val target = when (tourStep) {
+                0, TourAt.FINGERS -> deckSpot.rect
+                TourAt.START_STOP -> inRoom(deckLink.keyRect(DeckModel.startStop))
+                TourAt.SKIP -> {
+                    val a = deckLink.keyRect(DeckModel.prev)
+                    val b = deckLink.keyRect(DeckModel.next)
+                    inRoom(if (a != null && b != null) androidx.compose.ui.geometry.Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom)) else a ?: b)
+                }
+                TourAt.EJECT -> inRoom(deckLink.keyRect(DeckModel.eject))
+                4 -> inRoom(slot?.rect)
+                5 -> platterCenter?.let { androidx.compose.ui.geometry.Rect(it - rootOrigin, platterRadius) }
+                6 -> inRoom(deckLink.screenRect())
+                TourAt.FLAGS -> inRoom(settingsCell)
+                else -> null
+            }
+            val navTop = settingsCell?.top?.minus(rootOrigin.y)
+            val roomHeight = constraints.maxHeight.toFloat()
+            RoomTour(
+                index = tourStep.coerceIn(0, TOUR.lastIndex),
+                target = target,
+                bottomClear = if (navTop != null) roomHeight - navTop else with(density) { NAV_HEIGHT.toPx() },
+                onNext = { if (tourStep >= TOUR.lastIndex) actions.finishTour() else tourStep++ },
+                onSkip = actions::finishTour,
+                modifier = Modifier.zIndex(30f),
             )
+        }
+        // The first visit to Settings: two fingers up the list open Storage (TE · Settings · first visit).
+        LaunchedEffect(panel, settings) {
+            if (panel == Panel.SETTINGS && settings == SettingsSection.STORAGE && current.storageDemoPending) actions.finishStorageDemo()
+        }
+        val demoAt = storageHint
+        if (state.storageDemoPending && !state.tourPending && panel == Panel.SETTINGS && settings == null && portrait && demoAt != null) {
+            StorageDemo(demoAt.translate(-rootOrigin), onDone = actions::finishStorageDemo, modifier = Modifier.zIndex(30f))
         }
 
         if (sleepOpen) SleepTimerCard(state.sleepAt, actions::setSleepTimer) { sleepOpen = false }
@@ -1337,8 +1375,6 @@ fun RoomScreen(
             DownloadsAddedPop(added, addedAt, popAt.zIndex(21f).testTag("downloads-added")) { added = 0; panel = Panel.DOWNLOADS; pulledId = null }
         }
 
-        // The room's first-time helps.
-        Box(Modifier.fillMaxSize().zIndex(if (roomHelp != null) 31f else -1f)) { TeHelpSheet(roomHelp) { roomHelp = null } }
         // What's new: once the room is up (after onboarding and the launch intro), until "got it".
         val notes = state.whatsNew?.takeIf { !setupOpen && !launchIntro }
         Box(Modifier.fillMaxSize().zIndex(if (notes != null) 32f else -1f)) { WhatsNewSheet(notes, actions::dismissWhatsNew) }
@@ -1558,41 +1594,6 @@ internal fun pageBottom(navRoom: Boolean = true): WindowInsets =
     WindowInsets.ime.union(WindowInsets.navigationBars.add(WindowInsets(bottom = if (navRoom) NAV_HEIGHT else 0.dp)))
         .only(WindowInsetsSides.Bottom)
 
-/** Set once the two-finger hint over the deck has been seen. */
-private const val TILT_HINT_KEY = "tilt_hint_seen"
-
-/**
- * The deck's two-finger hint: a small ink card at the foot of the deck, its fingertips sliding
- * down and back, "two fingers: swipe down to see the deck from above, up to tilt it back."
- */
-@Composable
-private fun TiltHint(modifier: Modifier, onDone: () -> Unit) {
-    val shown = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { shown.animateTo(1f, tween(320)) }
-    val demo by rememberInfiniteTransition(label = "tilt-hint").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "fingers",
-    )
-    Box(modifier, contentAlignment = Alignment.BottomCenter) {
-        Row(
-            Modifier
-                .padding(bottom = 16.dp, start = 24.dp, end = 24.dp)
-                .graphicsLayer { alpha = shown.value; translationY = (1f - shown.value) * 12.dp.toPx() }
-                .background(Room.Ink)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .testTag("tilt-hint"),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Canvas(Modifier.size(28.dp)) { drawTwoFingerSwipe(Room.OnInk, demo) }
-            BasicText(
-                "two fingers: swipe down to see the deck from above, up to tilt it back.",
-                style = Room.Label.copy(color = Room.OnInk, lineHeight = 14.sp),
-                modifier = Modifier.weight(1f, fill = false).widthIn(max = 220.dp),
-            )
-            TeLink("got it", onDone, tag = "tilt-hint-done", arrow = "", color = Room.Signal)
-        }
-    }
-}
 
 /** How long Dig keeps a search after you leave it. */
 internal const val DIG_FORGET_MS = 10_000L
@@ -1721,13 +1722,11 @@ private fun DeckBand(
     empty: Boolean,
     deckAlpha: () -> Float,
     chrome: Modifier,
-    help: @Composable (Modifier) -> Unit,
     deck: @Composable (Modifier) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(bottom = if (empty) 0.dp else 16.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(412f / 240f).graphicsLayer { alpha = deckAlpha() }) { deck(Modifier.fillMaxSize()) }
         Row(Modifier.fillMaxWidth().then(chrome).padding(start = 24.dp, end = 24.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            help(Modifier)
             Spacer(Modifier.weight(1f))
             if (!empty) BasicText("33⅓ rpm", style = Room.LabelQuiet)
         }
@@ -1785,7 +1784,7 @@ private fun EmptyRoom(state: RoomState, actions: RoomActions, modifier: Modifier
  * side; tapping another song rolls it under the bar.
  */
 @Composable
-private fun TrackWheel(state: RoomState, actions: RoomActions, rows: Int, help: @Composable (Modifier) -> Unit = {}) {
+private fun TrackWheel(state: RoomState, actions: RoomActions, rows: Int) {
     val deck = state.deck
     val album = deck.album
     val height = WHEEL_ROW * rows
@@ -1852,7 +1851,6 @@ private fun TrackWheel(state: RoomState, actions: RoomActions, rows: Int, help: 
                 )
                 BasicText(track.title.lowercase(), style = (if (underBar) Room.Text else Room.Label).copy(color = ink), maxLines = 1, modifier = Modifier.weight(1f))
                 if (underBar) {
-                    help(Modifier)
                     if (playing && deck.isPlaying) BasicText("playing", style = Room.Label.copy(color = ink), modifier = Modifier.testTag("wheel-playing"))
                     else BasicText("tap to play", style = Room.Label.copy(color = Room.Signal), modifier = Modifier.testTag("wheel-tap-to-play"))
                 }
@@ -1869,35 +1867,6 @@ private fun clock(ms: Long, pad: Boolean): String {
     return if (pad) "%02d:%02d".format(total / 60, total % 60) else "%d:%02d".format(total / 60, total % 60)
 }
 
-/** A TE Help "?" that opens its help panel. */
-@Composable
-private fun HelpKey(about: String, modifier: Modifier, onClick: () -> Unit) {
-    Box(modifier) { InfoDot(about, onClick) }
-}
-
-/** The room's first-time helps, from TE · Help panels. */
-private val HELP_CRATE = TeHelp(
-    "help · room · first time", "the crate",
-    listOf(
-        "flick left or right to browse. tap a sleeve or pull it up to take the record out.",
-        "drag the record onto the platter to play it. tap it to flip the side, hold it to slow it down.",
-        "long-press a sleeve for its details: the running order, put back, remove.",
-    ),
-)
-private val HELP_WHEEL = TeHelp(
-    "help · room · first time", "the track wheel",
-    listOf(
-        "the songs of the record on the platter, numbered by side: a1, a2, b1…",
-        "scroll to move through them; the sharp one is playing. tap another to drop the needle there.",
-    ),
-)
-private val HELP_LED = TeHelp(
-    "help · room · first time", "the led window",
-    listOf(
-        "shows the track and time while a record plays.",
-        "hold it to open the signal chain: what the file is, what sonic does, and what your speaker gets.",
-    ),
-)
 
 internal fun recordCount(n: Int) = if (n == 1) "1 record" else "$n records"
 
