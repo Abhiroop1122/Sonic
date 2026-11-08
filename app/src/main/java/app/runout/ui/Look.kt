@@ -33,6 +33,7 @@ data class Look(
     /** On for a new install (see [LookPreferences]); off here so a room built in code starts without it. */
     val introOnLaunch: Boolean = false,
     val deckLights: Boolean = false,
+    /** On for a new install (see [LookPreferences]); off here so a room built in code shows everything. */
     val vinylOnly: Boolean = false,
 ) {
     /** Whether the room is dark, given the phone's own setting. */
@@ -76,7 +77,7 @@ class LookPreferences(context: Context) {
         prefs.getString(DECK, null)?.let { n -> DeckSkin.entries.firstOrNull { it.name == n } } ?: DeckSkin.MATCH,
         prefs.getBoolean(INTRO, true),
         prefs.getBoolean(LIGHTS, false),
-        prefs.getBoolean(VINYL_ONLY, false),
+        prefs.getBoolean(VINYL_ONLY, true),
     )
 
     private companion object {

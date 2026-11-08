@@ -592,12 +592,15 @@ class ListeningRoomUiTest {
     }
 
     @Test
-    fun `a new install plays the intro on launch, and turning it off sticks`() {
+    fun `a new install has the intro and vinyl only on, and turning them off sticks`() {
         val prefs = Fixtures.context.getSharedPreferences("look", android.content.Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
         assertTrue(LookPreferences(Fixtures.context).look.value.introOnLaunch)
+        assertTrue(LookPreferences(Fixtures.context).look.value.vinylOnly)
         LookPreferences(Fixtures.context).setIntroOnLaunch(false)
+        LookPreferences(Fixtures.context).setVinylOnly(false)
         assertFalse(LookPreferences(Fixtures.context).look.value.introOnLaunch)
+        assertFalse(LookPreferences(Fixtures.context).look.value.vinylOnly)
         prefs.edit().clear().commit()
     }
 
