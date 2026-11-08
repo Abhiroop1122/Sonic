@@ -53,9 +53,7 @@ The APK runs on ARM64, ARMv7, x86-64 and x86. Sonic isn't in F-Droid's own catal
 </p>
 
 <p align="center">
-  <img src="docs/images/screens/room-light.png" width="300" alt="The room in light: a white and teal turntable playing Paper Moons above a crate of sleeves, the track list below" />
-  &nbsp;&nbsp;
-  <img src="docs/images/screens/room-dark.png" width="300" alt="The room in dark: a black turntable on a true-black screen, the same crate and sleeves" />
+  <img src="docs/images/screens/landscape-demo.webp" width="100%" alt="Sonic sideways on a phone: the neon deck plays alone in vinyl-only mode, a tap brings the crate back, records are swapped on the platter, then the audio quality panel and a record's details" />
 </p>
 
 ## What it does
@@ -75,12 +73,15 @@ The home screen is a listening room. The crate sits under the deck, and the deck
   sleeve for its details: sides, running times, the whole record's length, and a picture you can
   share.
 
-Turn the phone sideways and the room fills the screen. Sideways is just for listening; the other
-pages wait until you turn it back.
-
 <p align="center">
-  <img src="docs/images/screens/landscape-demo.webp" width="100%" alt="Sonic sideways on a phone: the neon deck plays alone in vinyl-only mode, a tap brings the crate back, records are swapped on the platter, then the audio quality panel and a record's details" />
+  <img src="docs/images/screens/room-light.png" width="300" alt="The room in light: a white and teal turntable playing Paper Moons above a crate of sleeves, the track list below" />
+  &nbsp;&nbsp;
+  <img src="docs/images/screens/room-dark.png" width="300" alt="The room in dark: a black turntable on a true-black screen, the same crate and sleeves" />
 </p>
+
+Turn the phone sideways and the room fills the screen, as in the demo at the top. Sideways is just
+for listening; the other pages wait until you turn it back.
+
 
 ### Collect
 
