@@ -21,7 +21,7 @@
 
 ## Get it
 
-**[Download Sonic 1.4.2](https://github.com/Abhiroop1122/Sonic/releases/latest)**: open `Sonic-1.4.2.apk` on your phone and allow the install. Android 9 or newer, no account needed to listen.
+**[Download Sonic 1.5.0](https://github.com/Abhiroop1122/Sonic/releases/latest)**: open `Sonic-1.5.0.apk` on your phone and allow the install. Android 9 or newer, no account needed to listen.
 
 For updates without coming back here, add Sonic to F-Droid (or Droid-ify, Neo Store) or Obtainium. Both install this same APK, so you can switch between them.
 
@@ -34,8 +34,8 @@ For updates without coming back here, add Sonic to F-Droid (or Droid-ify, Neo St
 <summary>Check the download, or add the F-Droid repository by hand</summary>
 
 ```bash
-sha256sum -c Sonic-1.4.2.apk.sha256        # Linux
-shasum -a 256 -c Sonic-1.4.2.apk.sha256    # macOS
+sha256sum -c Sonic-1.5.0.apk.sha256        # Linux
+shasum -a 256 -c Sonic-1.5.0.apk.sha256    # macOS
 ```
 
 ```
@@ -218,7 +218,8 @@ release/     release notes, checksums, verification reports
 
 | Version | | |
 | :--- | :--- | :--- |
-| **[1.4.2](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.2)** | **Current** | A redline pass: one 4 dp rhythm, 11 sp text, calmer headings. |
+| **[1.5.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.5.0)** | **Current** | MP3 from your own folder, a first-start tour, Storage shown once. |
+| [1.4.2](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.2) | Release | A redline pass: one 4 dp rhythm, 11 sp text, calmer headings. |
 | [1.4.1](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.1) | Release | Settings › Connection: whether others can reach you, in its own row. |
 | [1.4.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.4.0) | Release | Sonic opens a port on your router, uploads through the relay, shelves that say why, Drops new every week. |
 | [1.3.0](https://github.com/Abhiroop1122/Sonic/releases/tag/v1.3.0) | Release | Dig hears the whole network, friends' shelves, sharing that works, what's new. |

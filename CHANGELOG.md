@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.5.0 (2026-11-08)
+
+MP3 from your own folder, and a walk round the room.
+
+- **MP3 in your folder.** A new switch in Settings › Flags, off by default. With it on, MP3 albums in your music folder become records too. MP3 is lossy, so its record is pressed black, never hi-res, and the signal path says "MP3 · lossy", never lossless or bit-perfect. If a folder holds the same album in FLAC and MP3, the FLAC is kept. Dig, Soulseek downloads, sharing and Friday Drops stay FLAC only.
+- **A tour of the room.** The first time the room opens (and once after this update), it lights one control at a time: start / stop, skip, eject, the crate, the record, the display, two fingers to lay the deck flat, and Settings › Flags. Use the lit control or tap next. Settings › About › how to play the deck plays it again. It replaces the old ? keys and the tilt hint.
+- **Storage, shown once.** The first time you open Settings, it shows the two-finger swipe up that opens Storage.
+- **What's new waits for the intro.** After an update it appears once the opening has handed over to the room, not on top of it.
+- **New installs** start with the intro on launch and vinyl only switched on.
+
+---
+
 ## 1.4.2 (2026-10-31)
 
 A redline pass over every screen: the same room, set more carefully.
