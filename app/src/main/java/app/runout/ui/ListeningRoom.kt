@@ -1339,8 +1339,8 @@ fun RoomScreen(
 
         // The room's first-time helps.
         Box(Modifier.fillMaxSize().zIndex(if (roomHelp != null) 31f else -1f)) { TeHelpSheet(roomHelp) { roomHelp = null } }
-        // What's new: over everything but onboarding, until "got it".
-        val notes = state.whatsNew?.takeIf { !setupOpen }
+        // What's new: once the room is up (after onboarding and the launch intro), until "got it".
+        val notes = state.whatsNew?.takeIf { !setupOpen && !launchIntro }
         Box(Modifier.fillMaxSize().zIndex(if (notes != null) 32f else -1f)) { WhatsNewSheet(notes, actions::dismissWhatsNew) }
 
         // Notes: one toast at a time. The cover notice waits for OK; a Soulseek problem stays until

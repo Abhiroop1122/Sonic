@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import app.runout.ui.DeckSkin
 import app.runout.ui.Look
+import app.runout.ui.LookPreferences
 import app.runout.ui.Room
 import app.runout.ui.ThemeMode
 import androidx.compose.ui.test.assertTextEquals
@@ -85,6 +86,7 @@ import app.runout.sharing.VinylPackage
 import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -572,6 +574,31 @@ class ListeningRoomUiTest {
         // No setup steps after it: straight to the room.
         compose.onNodeWithTag("screen:setup").assertDoesNotExist()
         compose.onNodeWithTag("turntable").assertExists()
+    }
+
+    @Test
+    fun `after an update with the intro on, what's new waits until the intro has handed over`() {
+        portrait()
+        compose.mainClock.autoAdvance = false
+        val notes = app.runout.update.WhatsNew.Section("1.5.0", "2026-11-08", "new things.", emptyList())
+        compose.setContent { RoomScreen(state().copy(look = Look(introOnLaunch = true), whatsNew = notes), RecordingActions()) }
+        compose.mainClock.advanceTimeBy(1_500)
+        compose.onNodeWithTag("onboarding-intro").assertExists()
+        compose.onNodeWithTag("whats-new-ok").assertDoesNotExist()
+        compose.onNodeWithTag("onboarding-intro").performClick()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithTag("onboarding-intro").assertDoesNotExist()
+        compose.onNodeWithTag("whats-new-ok").assertExists()
+    }
+
+    @Test
+    fun `a new install plays the intro on launch, and turning it off sticks`() {
+        val prefs = Fixtures.context.getSharedPreferences("look", android.content.Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        assertTrue(LookPreferences(Fixtures.context).look.value.introOnLaunch)
+        LookPreferences(Fixtures.context).setIntroOnLaunch(false)
+        assertFalse(LookPreferences(Fixtures.context).look.value.introOnLaunch)
+        prefs.edit().clear().commit()
     }
 
     @Test
